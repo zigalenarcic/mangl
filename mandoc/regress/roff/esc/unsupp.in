@@ -1,0 +1,8 @@
+.\" $OpenBSD$
+.TH ESC-UNSUPP 1 "December 15, 2018"
+.SH NAME
+esc-unsupp \- unsupported escape sequences
+.SH DESCRIPTION
+.nf
+exclamation mark: a\!b\[!]c
+question mark: a\?\&\?b\[?]c

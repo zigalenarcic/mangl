@@ -1,0 +1,36 @@
+.\" $OpenBSD: args.in,v 1.2 2017/07/04 14:53:24 schwarze Exp $
+.TH UR-ARGS 1 "August 14, 2018"
+.SH NAME
+UR-basic \- argument handling of the man-ext URI macro
+.SH DESCRIPTION
+argument, text, and tail:
+.UR http://www.openbsd.org/
+text
+.UE tail argument
+.PP
+argument plus text:
+.UR http://www.openbsd.org/
+OpenBSD
+homepage
+.UE
+next line
+.PP
+argument but no text:
+.UR http://www.netbsd.org/
+.UE
+.PP
+no argument, but text:
+.UR
+some text
+.UE
+.PP
+two arguments plus text:
+.UR first second
+some text
+.UE
+.PP
+two arguments, but no text:
+.UR first second
+.UE
+.PP
+final text

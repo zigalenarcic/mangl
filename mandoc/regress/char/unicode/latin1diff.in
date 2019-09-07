@@ -1,0 +1,10 @@
+.\" $OpenBSD: latin1diff.in,v 1.4 2018/08/21 16:01:38 schwarze Exp $
+.TH CHAR-UNICODE-LATIN1DIFF 1 "August 21, 2018"
+.SH NAME
+char-unicode-latin1diff \- Unicode characters in the ISO-8859-1 range
+.SH DESCRIPTION
+.nf
+BEGINTEST
+\[u00AF]\(a-	MACRON
+ENDTEST
+.fi

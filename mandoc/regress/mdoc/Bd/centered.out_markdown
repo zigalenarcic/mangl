@@ -1,0 +1,15 @@
+BD-CENTERED(1) - General Commands Manual
+
+# NAME
+
+**Bd-centered** - centered display blocks
+
+# DESCRIPTION
+
+preceding text
+
+> The text in this centered block is wide enough to not fit on one line.
+
+following text
+
+OpenBSD - January 4, 2019

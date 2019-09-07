@@ -1,0 +1,14 @@
+.\" $OpenBSD: centered.in,v 1.3 2019/01/04 03:54:50 schwarze Exp $
+.Dd $Mdocdate: January 4 2019 $
+.Dt BD-CENTERED 1
+.Os
+.Sh NAME
+.Nm Bd-centered
+.Nd centered display blocks
+.Sh DESCRIPTION
+preceding text
+.br
+.Bd -centered -offset indent
+The text in this centered block is wide enough to not fit on one line.
+.Ed
+following text

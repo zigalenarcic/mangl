@@ -1,0 +1,28 @@
+.\" $OpenBSD: REarg.in,v 1.4 2018/12/21 16:58:49 schwarze Exp $
+.TH RS-REARG 1 "December 21, 2018"
+.SH NAME
+RS-REarg \- arguments to the RE macro
+.SH DESCRIPTION
+.nr one 1
+level 1
+.RS 4n 2i
+level 2
+.RS 2n
+level 3
+.RE 2a
+back to 2
+.RE \n[one]b
+back to 1
+.RS 4n
+level 2
+.RS 2n
+level 3
+.RE "\\n[one]c"
+back to 1
+.RS 4n
+level 2
+.RS 2n
+level 3
+.RE 0d
+back to 1
+.RE \\n[one]e

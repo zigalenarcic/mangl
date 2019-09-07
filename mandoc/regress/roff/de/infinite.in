@@ -1,0 +1,21 @@
+.\" $OpenBSD: infinite.in,v 1.4 2018/08/23 14:16:12 schwarze Exp $
+.Dd $Mdocdate: August 23 2018 $
+.Dt DE-INFINITE 1
+.Os
+.Sh NAME
+.Nm de-infinite
+.Nd inifinte recursion in a user-defined macro
+.Sh DESCRIPTION
+initial text
+.de mym
+.Op \\$1 \\$2
+..
+.mym $1 \$1 end
+.mym \$1 middle end
+middle text
+.de mym
+.mym
+not printed
+..
+.mym
+final text

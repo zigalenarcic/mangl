@@ -1,0 +1,7 @@
+mandoc: REarg.in:8:8: ERROR: skipping excess arguments: RS ... 2i
+mandoc: REarg.in:12:6: ERROR: skipping excess arguments: RE ... a
+mandoc: REarg.in:14:6: ERROR: skipping excess arguments: RE ... b
+mandoc: REarg.in:20:7: ERROR: skipping excess arguments: RE ... c
+mandoc: REarg.in:26:6: ERROR: skipping excess arguments: RE ... d
+mandoc: REarg.in:28:6: ERROR: skipping excess arguments: RE ... e
+mandoc: REarg.in:28:2: ERROR: fewer RS blocks open, skipping: RE 1

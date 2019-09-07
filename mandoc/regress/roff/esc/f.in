@@ -1,0 +1,12 @@
+.\" $OpenBSD: f.in,v 1.4 2018/12/15 23:33:20 schwarze Exp $
+.TH ESC-F 1 "December 15, 2018"
+.SH NAME
+esc-f \- the roff escape f sequence: font changes
+.SH DESCRIPTION
+.nf
+BEGINTEST
+numbers: \f4bolditalic\f3bold\f2italic\f1roman
+letters: \fBbold\fIitalic\fPback\f(BIbolditalic\fRroman
+multiletter: \f[B]bold\f[]empty\f[I]italic\f[P]back\f[BI]bolditalic\f[R]roman
+typewriter: \f(CWroman\f(CBbold\f(CRroman\f(CIitalic\fRroman
+ENDTEST
