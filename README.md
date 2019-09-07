@@ -2,6 +2,8 @@
 
 This is a graphical man page viewer based on mandoc (https://mandoc.bsd.lv/).
 
+![Screenshot](screenshot/screenshot.png)
+
 It uses OpenGL to display man pages with clickable hyperlinks and smooth scrolling.
 
 Features:
