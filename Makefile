@@ -1,5 +1,5 @@
 CFLAGS = -g -O2 -Wall
-LDFLAGS = -lz -lGL -lglut
+LDFLAGS = -lm -lz -lGL -lglut
 
 LIBMAN_OBJS	 = mandoc/man.o \
 			   mandoc/man_macro.o \
