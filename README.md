@@ -15,6 +15,13 @@ Features:
 
 ## Building
 
+Install prerequisites if necessary (zlib, OpenGL and FreeGLUT headers and
+libraries). On Debian systems run:
+
+```
+sudo apt install libz-dev libgl-dev freeglut3-dev
+```
+
 First run `./configure` in mandoc folder:
 
 ```
