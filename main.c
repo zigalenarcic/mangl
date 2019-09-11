@@ -803,7 +803,7 @@ void render_manpage(struct manpage *p)
     {
         struct span *s = p->document.lines[i];
 
-        if ((vertical_position >= (page->scroll_position - line_height(doc_scale))) &&
+        if ((vertical_position >= (page->scroll_position - line_height(doc_scale) - document_margin)) &&
                 ((vertical_position - line_height(doc_scale)) < (page->scroll_position + window_height)))
         {
             int num_chars = 0;
