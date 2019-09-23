@@ -1641,6 +1641,11 @@ int main(int argc, char *argv[])
     sb_push(page_stack, page);
     stack_pos++;
 
+    if (fork() != 0)
+    {
+        exit(EXIT_SUCCESS);
+    }
+
     char window_title[256];
 
     if (strlen(page->manpage_name) > 0)
