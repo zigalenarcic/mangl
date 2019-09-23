@@ -51,7 +51,7 @@ unsigned int font_char_width = 7;
 unsigned int font_char_height = 14;
 
 const static int scrollbar_width = 12;
-const static int scrollbar_thumb_margin = 1;
+const static int scrollbar_thumb_margin = 0;
 
 int scrollbar_thumb_position;
 int scrollbar_thumb_size;
@@ -60,7 +60,7 @@ int scrollbar_thumb_hover;
 int scrollbar_dragging = 0;
 int scrollbar_thumb_mouse_down_y = 0;
 int scrollbar_thumb_mouse_down_thumb_position = 0;
-int document_margin = 15;
+int document_margin = 29;
 
 int window_width;
 int window_height;
@@ -458,6 +458,11 @@ int character_width(float scale)
     return font_char_width;
 }
 
+int document_width(void)
+{
+    return 2 * document_margin + ((78 + 2) * character_width(doc_scale));
+}
+
 int document_height(void)
 {
     return page->document.n_lines * line_height(doc_scale) + 2 * document_margin;
@@ -632,10 +637,11 @@ float color_table[][3] = {
     {143.0f/255.0f, 191.0f/255.0f, 220.0f/255.0f},
     {255.0f/255.0f, 185.0f/255.0f, 100.0f/255.0f},
     {0.4, 0.4, 0.4},
-    {0.5, 0.5, 0.5},
+    {0.15, 0.15, 0.15},
+    {0.27, 0.27, 0.27},
+    {0.33, 0.33, 0.33},
     {0.2, 0.2, 0.2},
-    {0.3, 0.3, 0.3},
-    {0.2, 0.2, 0.2},
+    {235.0f/255.0f, 180.0f/255.0f, 112.0f/255.0f},
 };
 
 enum {
@@ -648,6 +654,7 @@ enum {
     COLOR_INDEX_SCROLLBAR_THUMB,
     COLOR_INDEX_SCROLLBAR_THUMB_HOVER,
     COLOR_INDEX_LINK_BACKGROUND,
+    COLOR_INDEX_PAGE_BORDER,
 };
 
 void set_color(int i)
@@ -660,9 +667,8 @@ void draw_rectangle(int x, int y, int w, int h)
     glBegin(GL_TRIANGLE_STRIP);
     glVertex2i(x, y);
     glVertex2i(x + w, y);
-    glVertex2i(x + w, y + h);
     glVertex2i(x, y + h);
-    glVertex2i(x, y);
+    glVertex2i(x + w, y + h);
     glEnd();
 }
 
@@ -837,6 +843,12 @@ void render(void)
 
     render_manpage(page);
 
+    /* draw document border */
+    int border_margin = document_margin * 3 / 8 + 1;
+    set_color(COLOR_INDEX_PAGE_BORDER);
+    draw_rectangle_outline(border_margin, border_margin - page->scroll_position,
+            document_width() - 2 * border_margin, document_height() - 2 * border_margin);
+
     /* draw link hovering */
     {
         int link_number = sb_count(page->links);
@@ -854,17 +866,21 @@ void render(void)
             {
                 if (page->links[i].highlight)
                 {
-                    draw_rectangle_outline(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
+                    //draw_rectangle_outline(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
+                    glEnable(GL_BLEND);
+                    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                    glBlendEquation(GL_FUNC_ADD);
+                    glColor4f(0.2f, 0.0f, 1.0f, 0.3f);
+                    draw_rectangle(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
+                    glDisable(GL_BLEND);
                 }
             }
         }
     }
 
     /* draw the scrollbar */
-    set_color(COLOR_INDEX_DIM);
+    set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
     draw_rectangle(window_width - scrollbar_width, 0, scrollbar_width, window_height);
-    set_color(COLOR_INDEX_BACKGROUND);
-    draw_rectangle(window_width - scrollbar_width + 1, 0, scrollbar_width - 1, window_height);
 
     update_scrollbar();
 
@@ -1160,7 +1176,7 @@ void keyboard_func(unsigned char key, int x, int y)
             }
             break;
         default:
-            printf("Key %d\n", key);
+            break;
     }
 }
 
@@ -1168,8 +1184,25 @@ void special_func(int key, int x, int y)
 {
     switch (key)
     {
+        case GLUT_KEY_UP:
+            set_scroll_position(page->scroll_position - scroll_amount);
+            break;
         case GLUT_KEY_DOWN:
-            printf("Down\n");
+            set_scroll_position(page->scroll_position + scroll_amount);
+            break;
+        case GLUT_KEY_PAGE_UP:
+            set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+            break;
+        case GLUT_KEY_PAGE_DOWN:
+            set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
+            break;
+        case GLUT_KEY_HOME:
+            set_scroll_position(0);
+            break;
+        case GLUT_KEY_END:
+            set_scroll_position(1000000000);
+            break;
+        default:
             break;
     }
 }
