@@ -1002,31 +1002,9 @@ void mouse_func(int button, int state, int x, int y)
             }
             break;
         case 2: // right click
-            if (state == GLUT_DOWN)
+            if (state == GLUT_UP)
             {
-                // see if a link has been clicked
-                link_t *l = link_under_cursor(x, y);
-                if (l)
-                {
-                    clicked_in_link = 1;
-                    link = *l;
-                }
-                else
-                {
-                    clicked_in_link = 0;
-                }
-            }
-            else if (state == GLUT_UP)
-            {
-                if (clicked_in_link)
-                {
-                    link_t *l = link_under_cursor(x, y);
-                    if (l && (memcmp(&l->document_rectangle, &link.document_rectangle, sizeof(recti)) == 0)
-                            && (strcmp(l->link, link.link) == 0))
-                    {
-                        /* right click - open a new instance */
-                    }
-                }
+                page_back();
             }
             break;
         case 3:
