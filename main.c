@@ -42,13 +42,20 @@
 #define ZMALLOC(type, n) ((type *)calloc(n, sizeof(type)))
 
 #define FONT_TEXTURE_SIZE 256
-static unsigned int font_image_width = 112;
-static unsigned int font_image_height = 84;
+const static unsigned int font_image_width = 112;
+const static unsigned int font_image_height = 84;
 
 #include "font_image.h"
 
-unsigned int font_char_width = 7;
-unsigned int font_char_height = 14;
+enum DISPLAY_MODES {
+    D_MANPAGE = 0,
+    D_SEARCH = 1
+};
+
+int display_mode = D_MANPAGE;
+
+const unsigned int font_char_width = 7;
+const unsigned int font_char_height = 14;
 
 const static int scrollbar_width = 12;
 const static int scrollbar_thumb_margin = 0;
@@ -60,7 +67,7 @@ int scrollbar_thumb_hover;
 int scrollbar_dragging = 0;
 int scrollbar_thumb_mouse_down_y = 0;
 int scrollbar_thumb_mouse_down_thumb_position = 0;
-int document_margin = 29;
+const static int document_margin = 29;
 
 int window_width;
 int window_height;
@@ -225,6 +232,8 @@ void add_to_span(struct span *s, int letter)
     }
     else if (letter == 160) /* non breaking space */
         letter = ' ';
+    else if ((letter == 0x201c) || (letter == 0x201d)) /* left and right double quotation mark */
+        letter = '"';
 
     if (letter < 256)
     {
@@ -841,60 +850,85 @@ void render(void)
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
-    render_manpage(page);
-
-    /* draw document border */
-    int border_margin = document_margin * 3 / 8 + 1;
-    set_color(COLOR_INDEX_PAGE_BORDER);
-    draw_rectangle_outline(border_margin, border_margin - page->scroll_position,
-            document_width() - 2 * border_margin, document_height() - 2 * border_margin);
-
-    /* draw link hovering */
+    switch (display_mode)
     {
-        int link_number = sb_count(page->links);
-        set_color(COLOR_INDEX_FOREGROUND);
-        for (int i = 0; i < link_number; i++)
-        {
-            recti r = page->links[i].document_rectangle;
-
-            r.x += document_margin;
-            r.x2 += document_margin;
-            r.y += document_margin - page->scroll_position;
-            r.y2 += document_margin - page->scroll_position;
-
-            if ((r.y2 >= 0) || (r.y < window_height))
+        case D_MANPAGE:
             {
-                if (page->links[i].highlight)
+                render_manpage(page);
+
+                /* draw document border */
+                int border_margin = document_margin * 3 / 8 + 1;
+                set_color(COLOR_INDEX_PAGE_BORDER);
+                draw_rectangle_outline(border_margin, border_margin - page->scroll_position,
+                        document_width() - 2 * border_margin, document_height() - 2 * border_margin);
+
+                /* draw link hovering */
                 {
-                    //draw_rectangle_outline(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
-                    glEnable(GL_BLEND);
-                    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-                    glBlendEquation(GL_FUNC_ADD);
-                    glColor4f(0.2f, 0.0f, 1.0f, 0.3f);
-                    draw_rectangle(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
-                    glDisable(GL_BLEND);
+                    int link_number = sb_count(page->links);
+                    set_color(COLOR_INDEX_FOREGROUND);
+                    for (int i = 0; i < link_number; i++)
+                    {
+                        recti r = page->links[i].document_rectangle;
+
+                        r.x += document_margin;
+                        r.x2 += document_margin;
+                        r.y += document_margin - page->scroll_position;
+                        r.y2 += document_margin - page->scroll_position;
+
+                        if ((r.y2 >= 0) || (r.y < window_height))
+                        {
+                            if (page->links[i].highlight)
+                            {
+                                //draw_rectangle_outline(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
+                                glEnable(GL_BLEND);
+                                glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+                                glBlendEquation(GL_FUNC_ADD);
+                                glColor4f(0.2f, 0.0f, 1.0f, 0.3f);
+                                draw_rectangle(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
+                                glDisable(GL_BLEND);
+                            }
+                        }
+                    }
                 }
+
+                /* draw the scrollbar */
+                set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
+                draw_rectangle(window_width - scrollbar_width, 0, scrollbar_width, window_height);
+
+                update_scrollbar();
+
+                if (scrollbar_thumb_hover)
+                {
+                    set_color(COLOR_INDEX_SCROLLBAR_THUMB_HOVER);
+                }
+                else
+                {
+                    set_color(COLOR_INDEX_SCROLLBAR_THUMB);
+                }
+
+                draw_rectangle(window_width - scrollbar_width + scrollbar_thumb_margin, scrollbar_thumb_position,
+                        scrollbar_width - 1 * scrollbar_thumb_margin, scrollbar_thumb_size);
             }
-        }
+            break;
+
+        case D_SEARCH:
+        default:
+            {
+                set_color(COLOR_INDEX_DIM);
+                int search_width = 300;
+                draw_rectangle(window_width / 2 - search_width / 2, 100,
+                        search_width, font_char_height * 3 / 2);
+
+                set_color(COLOR_INDEX_FOREGROUND);
+                draw_string("Type to search...", window_width / 2 - search_width / 2, 100, doc_scale);
+
+                set_color(COLOR_INDEX_DIM);
+                draw_rectangle(window_width / 2 - search_width / 2, 120,
+                        search_width, 10 * font_char_height * 3 / 2);
+            }
+            break;
     }
 
-    /* draw the scrollbar */
-    set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
-    draw_rectangle(window_width - scrollbar_width, 0, scrollbar_width, window_height);
-
-    update_scrollbar();
-
-    if (scrollbar_thumb_hover)
-    {
-        set_color(COLOR_INDEX_SCROLLBAR_THUMB_HOVER);
-    }
-    else
-    {
-        set_color(COLOR_INDEX_SCROLLBAR_THUMB);
-    }
-
-    draw_rectangle(window_width - scrollbar_width + scrollbar_thumb_margin, scrollbar_thumb_position,
-            scrollbar_width - 1 * scrollbar_thumb_margin, scrollbar_thumb_size);
 
     glutSwapBuffers();
 }
@@ -1569,70 +1603,75 @@ void page_forward(void)
 
 int main(int argc, char *argv[])
 {
-    if (argc < 2)
-        print_usage(argv[0]);
-
-    const char *filename = NULL;
-    char tmp_filename[1024];
-
+    char window_title[256];
     manpage_database = hashmap_new();
-
-    if (strcmp(argv[1], "-f") == 0)
-    {
-        if (argc >= 3)
-        {
-            filename = argv[2];
-        }
-        else
-        {
-            fprintf(stderr, "Argument required after \"-f\"\n");
-            print_usage(argv[0]);
-        }
-    }
-    else
-    {
-        const char *section = NULL;
-        const char *search_term = NULL;
-        if (argc == 2)
-        {
-            search_term = argv[1];
-        }
-        else if (argc == 3)
-        {
-            section = argv[1];
-            search_term = argv[2];
-        }
-
-        if (search_filesystem(section, search_term, tmp_filename) == 0)
-        {
-            filename = tmp_filename;
-        }
-    }
-
-    if (filename == NULL)
-        exit(EXIT_FAILURE);
 
     make_manpage_database();
 
-    page = load_manpage(filename);
-
-    sb_push(page_stack, page);
-    stack_pos++;
-
-    if (fork() != 0)
+    if (argc < 2)
     {
-        exit(EXIT_SUCCESS);
-    }
-
-    char window_title[256];
-
-    if (strlen(page->manpage_name) > 0)
-    {
-        sprintf(window_title, "%s(%s) - mangl", page->manpage_name, page->manpage_section);
+        display_mode = D_SEARCH;
+        strcpy(window_title, "mangl");
     }
     else
     {
-        sprintf(window_title, "%s - mangl", page->filename);
+        const char *filename = NULL;
+        char tmp_filename[1024];
+
+        if (strcmp(argv[1], "-f") == 0)
+        {
+            if (argc >= 3)
+            {
+                filename = argv[2];
+            }
+            else
+            {
+                fprintf(stderr, "Argument required after \"-f\"\n");
+                print_usage(argv[0]);
+            }
+        }
+        else
+        {
+            const char *section = NULL;
+            const char *search_term = NULL;
+            if (argc == 2)
+            {
+                search_term = argv[1];
+            }
+            else if (argc == 3)
+            {
+                section = argv[1];
+                search_term = argv[2];
+            }
+
+            if (search_filesystem(section, search_term, tmp_filename) == 0)
+            {
+                filename = tmp_filename;
+            }
+        }
+
+        if (filename == NULL)
+            exit(EXIT_FAILURE);
+
+        page = load_manpage(filename);
+
+        sb_push(page_stack, page);
+        stack_pos++;
+
+        if (strlen(page->manpage_name) > 0)
+        {
+            sprintf(window_title, "%s(%s) - mangl", page->manpage_name, page->manpage_section);
+        }
+        else
+        {
+            sprintf(window_title, "%s - mangl", page->filename);
+        }
+    }
+
+    /* display gui */
+    if (fork() != 0)
+    {
+        exit(EXIT_SUCCESS);
     }
 
     glutInit(&argc, argv);
@@ -1654,7 +1693,8 @@ int main(int argc, char *argv[])
 
     glutMainLoop();
 
-    free_manpage(page);
+    if (page)
+        free_manpage(page);
 
     return 0;
 }
