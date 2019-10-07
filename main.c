@@ -53,6 +53,21 @@ enum DISPLAY_MODES {
 };
 
 int display_mode = D_MANPAGE;
+char search_term[512];
+
+char **manpage_names;
+
+#define N_SHOWN_RESULTS 12
+int results_selected_index = 0;
+int results_shown_lines = N_SHOWN_RESULTS;
+int results_view_offset = 0;
+const static int search_width = 300;
+
+struct {
+    int idx;
+    int goodness;
+} matches[100];
+int matches_count = 0;
 
 const unsigned int font_char_width = 7;
 const unsigned int font_char_height = 14;
@@ -75,7 +90,7 @@ int window_height;
 GLuint font_texture;
 
 float doc_scale = 0.5f;
-int scroll_amount = 30;
+int scroll_amount = 40;
 
 map_t manpage_database;
 
@@ -110,6 +125,7 @@ double clamp(double val, double min, double max)
 void print_usage(const char *exe)
 {
     fprintf(stderr, "Usage:\n");
+    fprintf(stderr, "%s\n", exe);
     fprintf(stderr, "%s [section] man_page\n", exe);
     fprintf(stderr, "%s -f man_page_file\n", exe);
     fprintf(stderr, "\n");
@@ -589,6 +605,9 @@ void find_links(struct manpage *p)
 
 void update_scrollbar(void)
 {
+    if (display_mode == D_SEARCH)
+        return;
+
     int doc_height = document_height();
     int thumb_size_tmp = (double)window_height / (doc_height - 1) * window_height;
 
@@ -748,7 +767,7 @@ void print_text_gl(int x, int y, const char *str)
     }
 }
 
-size_t draw_string(const char *str, int x, int y, float scale)
+size_t draw_string_manpage(const char *str, int x, int y, float scale)
 {
     set_color(COLOR_INDEX_FOREGROUND);
     size_t count = 0;
@@ -782,6 +801,18 @@ size_t draw_string(const char *str, int x, int y, float scale)
         {
             set_color(COLOR_INDEX_FOREGROUND);
         }
+        str++;
+    }
+
+    return count;
+}
+
+size_t draw_string(const char *str, int x, int y, float scale)
+{
+    size_t count = 0;
+    while (*str)
+    {
+        put_char_gl(x + count++ * character_width(doc_scale), y, *str);
         str++;
     }
 
@@ -826,7 +857,7 @@ void render_manpage(struct manpage *p)
             {
                 if (s->length > 0)
                 {
-                    num_chars += draw_string(s->buffer,
+                    num_chars += draw_string_manpage(s->buffer,
                             document_margin + num_chars * character_width(doc_scale),
                             document_margin + vertical_position - page->scroll_position, doc_scale);
                 }
@@ -838,6 +869,75 @@ void render_manpage(struct manpage *p)
 
         if ((vertical_position - line_height(doc_scale)) > (page->scroll_position + window_height))
             break;
+    }
+}
+
+int find_string(const char *search_term, const char *text)
+{
+    int search_len = strlen(search_term);
+    int text_len = strlen(text);
+
+    for (int i = 0; i < (text_len - search_len); i++)
+    {
+        bool match = true;
+        for (int j = 0; j < search_len; j++)
+        {
+            if (search_term[j] != text[i + j])
+            {
+                match = false;
+                break;
+            }
+        }
+
+        if (match)
+            return i;
+    }
+
+    return -1;
+}
+
+int compar_match(const void *a, const void *b)
+{
+    return ((const int *)b)[1] - ((const int *)a)[1];
+}
+
+void update_search(void)
+{
+    int search_term_len = strlen(search_term);
+
+    memset(matches, 0, sizeof(matches));
+    matches_count = 0;
+
+    results_view_offset = 0;
+    results_selected_index = 0;
+
+    if (search_term_len == 0)
+    {
+        return;
+    }
+    else
+    {
+        int count = sb_count(manpage_names);
+
+        for (int i = 0; i < count; i++)
+        {
+            int position = find_string(search_term, manpage_names[i]);
+
+            if (position >= 0)
+            {
+                matches[matches_count].idx = i;
+                matches[matches_count].goodness = -position * 100 - (strlen(manpage_names[i]) - search_term_len);
+                matches_count++;
+
+                if (matches_count >= ARRAY_SIZE(matches))
+                {
+                    break;
+                }
+            }
+        }
+
+        qsort(matches, matches_count, sizeof(matches[0]),
+                &compar_match);
     }
 }
 
@@ -914,17 +1014,56 @@ void render(void)
         case D_SEARCH:
         default:
             {
-                set_color(COLOR_INDEX_DIM);
-                int search_width = 300;
-                draw_rectangle(window_width / 2 - search_width / 2, 100,
-                        search_width, font_char_height * 3 / 2);
+                set_color(COLOR_INDEX_PAGE_BORDER);
+                int search_height = font_char_height * 3 / 2;
 
-                set_color(COLOR_INDEX_FOREGROUND);
-                draw_string("Type to search...", window_width / 2 - search_width / 2, 100, doc_scale);
+                draw_rectangle_outline(window_width / 2 - search_width / 2, 100,
+                        search_width, search_height);
 
-                set_color(COLOR_INDEX_DIM);
-                draw_rectangle(window_width / 2 - search_width / 2, 120,
-                        search_width, 10 * font_char_height * 3 / 2);
+                set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
+                draw_rectangle_outline(window_width / 2 - search_width / 2, 130,
+                        search_width, results_shown_lines * search_height);
+
+                const char *text = "Type to search...";
+                if (strlen(search_term) == 0)
+                {
+                    set_color(COLOR_INDEX_DIM);
+                    set_color(COLOR_INDEX_FOREGROUND);
+                }
+                else
+                {
+                    set_color(COLOR_INDEX_FOREGROUND);
+                    text = search_term;
+                }
+
+                draw_string(text, window_width / 2 - search_width / 2 + 4, 100 + 4, doc_scale);
+
+                /* draw search results */
+                for (int i = 0; i < results_shown_lines; i++)
+                {
+                    int real_index = i + results_view_offset;
+
+                    if (real_index < matches_count)
+                    {
+                        draw_string(manpage_names[matches[real_index].idx],
+                                window_width / 2 - search_width / 2 + 4, 130 + i * search_height + 4, doc_scale);
+                    }
+                }
+
+                if ((results_selected_index >= 0) && (results_selected_index < matches_count))
+                {
+                    set_color(COLOR_INDEX_BOLD);
+                    int index_on_view = results_selected_index - results_view_offset;
+                    draw_rectangle_outline(window_width / 2 - search_width / 2, 130 + index_on_view * search_height,
+                            search_width, search_height);
+                }
+
+                {
+                    char tmp[128];
+                    sprintf(tmp, "%d matches", matches_count);
+                    set_color(COLOR_INDEX_DIM);
+                    draw_string(tmp, window_width / 2 - strlen(tmp) * character_width(doc_scale) / 2 + 4, 130 + 4 + results_shown_lines * search_height, doc_scale);
+                }
             }
             break;
     }
@@ -951,6 +1090,24 @@ int scrollbar_thumb_hittest(int x, int y)
         return 1;
     else
         return 0;
+}
+
+int results_hittest(int x, int y)
+{
+    int search_height = font_char_height * 3 / 2;
+
+    for (int i = 0; i < results_shown_lines; i++)
+    {
+        if ((x >= window_width / 2 - search_width / 2) &&
+                (x < window_width / 2 - search_width / 2 + search_width) &&
+                (y >= 130 + i * search_height) &&
+                (y < 130 + i * search_height + search_height))
+        {
+            return i;
+        }
+    }
+
+    return -1; /* returns index or -1 */
 }
 
 link_t *link_under_cursor(int x, int y)
@@ -981,76 +1138,150 @@ void mouse_func(int button, int state, int x, int y)
     static int clicked_in_link = 0;
     static link_t link;
 
-    switch (button)
+    switch (display_mode)
     {
-        case 0:
-            if (state == GLUT_DOWN)
+        case D_MANPAGE:
+            switch (button)
             {
-                if (scrollbar_thumb_hittest(x, y))
-                {
-                    scrollbar_dragging = 1;
-                    scrollbar_thumb_mouse_down_y = y;
-                    scrollbar_thumb_mouse_down_thumb_position = scrollbar_thumb_position;
-                }
-                else if (x >= (window_width - scrollbar_width))
-                {
-                    // page up or down if clicked outside the thumb
-                    if (y < scrollbar_thumb_position)
+                case 0:
+                    if (state == GLUT_DOWN)
                     {
-                        set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+                        if (scrollbar_thumb_hittest(x, y))
+                        {
+                            scrollbar_dragging = 1;
+                            scrollbar_thumb_mouse_down_y = y;
+                            scrollbar_thumb_mouse_down_thumb_position = scrollbar_thumb_position;
+                        }
+                        else if (x >= (window_width - scrollbar_width))
+                        {
+                            // page up or down if clicked outside the thumb
+                            if (y < scrollbar_thumb_position)
+                            {
+                                set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+                            }
+                            else if (y >= (scrollbar_thumb_position + scrollbar_thumb_size))
+                            {
+                                set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
+                            }
+                        }
+                        else
+                        {
+                            // see if a link has been clicked
+                            link_t *l = link_under_cursor(x, y);
+                            if (l)
+                            {
+                                clicked_in_link = 1;
+                                link = *l;
+                            }
+                            else
+                            {
+                                clicked_in_link = 0;
+                            }
+                        }
                     }
-                    else if (y >= (scrollbar_thumb_position + scrollbar_thumb_size))
+                    else if (state == GLUT_UP)
                     {
-                        set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
-                    }
-                }
-                else
-                {
-                    // see if a link has been clicked
-                    link_t *l = link_under_cursor(x, y);
-                    if (l)
-                    {
-                        clicked_in_link = 1;
-                        link = *l;
-                    }
-                    else
-                    {
-                        clicked_in_link = 0;
-                    }
-                }
-            }
-            else if (state == GLUT_UP)
-            {
-                scrollbar_dragging = 0;
+                        scrollbar_dragging = 0;
 
-                if (clicked_in_link)
-                {
-                    link_t *l = link_under_cursor(x, y);
-                    if (l && (memcmp(&l->document_rectangle, &link.document_rectangle, sizeof(recti)) == 0)
-                            && (strcmp(l->link, link.link) == 0))
-                    {
-                        // follow the link in the same instance
-                        open_new_page(link.link);
+                        if (clicked_in_link)
+                        {
+                            link_t *l = link_under_cursor(x, y);
+                            if (l && (memcmp(&l->document_rectangle, &link.document_rectangle, sizeof(recti)) == 0)
+                                    && (strcmp(l->link, link.link) == 0))
+                            {
+                                // follow the link in the same instance
+                                open_new_page(link.link);
+                            }
+                        }
                     }
-                }
+                    break;
+                case 2: // right click
+                    if (state == GLUT_UP)
+                    {
+                        page_back();
+                    }
+                    break;
+                case 3:
+                    if (state == GLUT_DOWN)
+                    {
+                        set_scroll_position(page->scroll_position - scroll_amount);
+                    }
+                    break;
+                case 4:
+                    if (state == GLUT_DOWN)
+                    {
+                        set_scroll_position(page->scroll_position + scroll_amount);
+                    }
+                    break;
             }
             break;
-        case 2: // right click
-            if (state == GLUT_UP)
+        case D_SEARCH:
+            switch (button)
             {
-                page_back();
-            }
-            break;
-        case 3:
-            if (state == GLUT_DOWN)
-            {
-                set_scroll_position(page->scroll_position - scroll_amount);
-            }
-            break;
-        case 4:
-            if (state == GLUT_DOWN)
-            {
-                set_scroll_position(page->scroll_position + scroll_amount);
+                case 0:
+                    if (state == GLUT_DOWN)
+                    {
+                    }
+                    else if (state == GLUT_UP)
+                    {
+                        int index = results_hittest(x, y);
+                        if (index >= 0)
+                        {
+                            int actual_index = index + results_view_offset;
+
+                            if (actual_index < matches_count)
+                            {
+                                results_selected_index = actual_index;
+                                const char *key = manpage_names[matches[results_selected_index].idx];
+                                char *test;
+                                if (hashmap_get(manpage_database, key, strlen(key), (void **)&test) == MAP_OK)
+                                {
+                                    open_new_page(test);
+                                }
+                            }
+                        }
+                    }
+                    break;
+                case 2: // right click
+                    break;
+                case 3:
+                    if (state == GLUT_DOWN)
+                    {
+                        int index = results_hittest(x, y);
+                        if (index >= 0)
+                        {
+                            if (results_view_offset > 0)
+                            {
+                                results_view_offset--;
+                                int actual_index = index + results_view_offset;
+
+                                if (actual_index < matches_count)
+                                    results_selected_index = actual_index;
+
+                                glutPostRedisplay();
+                            }
+                        }
+                    }
+                    break;
+                case 4:
+                    if (state == GLUT_DOWN)
+                    {
+                        int index = results_hittest(x, y);
+                        if (index >= 0)
+                        {
+                            if (results_view_offset < (matches_count - results_shown_lines))
+                            {
+                                results_view_offset++;
+                                int actual_index = index + results_view_offset;
+
+                                if (actual_index < matches_count)
+                                    results_selected_index = actual_index;
+
+                                glutPostRedisplay();
+                            }
+                        }
+                    }
+                    break;
             }
             break;
     }
@@ -1058,6 +1289,11 @@ void mouse_func(int button, int state, int x, int y)
 
 void mouse_motion_func(int x, int y)
 {
+    if (display_mode == D_SEARCH)
+    {
+        return;
+    }
+
     //printf("Motion %d %d\n", x, y);
     if (scrollbar_dragging)
     {
@@ -1072,52 +1308,77 @@ void mouse_passive_motion_func(int x, int y)
     //printf("Passive motion %d %d\n", x, y);
     int redisplay = 0;
 
-    if (scrollbar_thumb_hittest(x, y))
+    switch (display_mode)
     {
-        if (scrollbar_thumb_hover == 0)
-        {
-            scrollbar_thumb_hover = 1;
-            redisplay = 1;
-        }
-    }
-    else
-    {
-        if (scrollbar_thumb_hover == 1)
-        {
-            scrollbar_thumb_hover = 0;
-            redisplay = 1;
-        }
-    }
-
-    // check if any links reside under the mouse cursor
-    struct manpage *p = page;
-
-    int link_number = sb_count(p->links);
-    for (int i = 0; i < link_number; i++)
-    {
-        recti r = p->links[i].document_rectangle;
-
-        r.x += document_margin;
-        r.x2 += document_margin;
-        r.y += document_margin - page->scroll_position;
-        r.y2 += document_margin - page->scroll_position;
-
-        if (inside_recti(r, x, y))
-        {
-            if (p->links[i].highlight == 0)
+        case D_MANPAGE:
             {
-                p->links[i].highlight = 1;
-                redisplay = 1;
+                if (scrollbar_thumb_hittest(x, y))
+                {
+                    if (scrollbar_thumb_hover == 0)
+                    {
+                        scrollbar_thumb_hover = 1;
+                        redisplay = 1;
+                    }
+                }
+                else
+                {
+                    if (scrollbar_thumb_hover == 1)
+                    {
+                        scrollbar_thumb_hover = 0;
+                        redisplay = 1;
+                    }
+                }
+
+                // check if any links reside under the mouse cursor
+                struct manpage *p = page;
+
+                int link_number = sb_count(p->links);
+                for (int i = 0; i < link_number; i++)
+                {
+                    recti r = p->links[i].document_rectangle;
+
+                    r.x += document_margin;
+                    r.x2 += document_margin;
+                    r.y += document_margin - page->scroll_position;
+                    r.y2 += document_margin - page->scroll_position;
+
+                    if (inside_recti(r, x, y))
+                    {
+                        if (p->links[i].highlight == 0)
+                        {
+                            p->links[i].highlight = 1;
+                            redisplay = 1;
+                        }
+                    }
+                    else
+                    {
+                        if (p->links[i].highlight > 0)
+                        {
+                            p->links[i].highlight = 0;
+                            redisplay = 1;
+                        }
+                    }
+                }
             }
-        }
-        else
-        {
-            if (p->links[i].highlight > 0)
+            break;
+        case D_SEARCH:
             {
-                p->links[i].highlight = 0;
-                redisplay = 1;
+                int index = results_hittest(x, y);
+                if (index >= 0)
+                {
+                    int actual_index = index + results_view_offset;
+
+                    if (actual_index < matches_count)
+                    {
+                        if (results_selected_index != actual_index)
+                        {
+                            results_selected_index = actual_index;
+                            redisplay = 1;
+                        }
+                    }
+                }
             }
-        }
+            break;
     }
 
     if (redisplay > 0)
@@ -1127,94 +1388,179 @@ void mouse_passive_motion_func(int x, int y)
 void keyboard_func(unsigned char key, int x, int y)
 {
     static int g_pending = 0;
-    if (key == 'g')
+
+    if (display_mode == D_MANPAGE)
     {
+        if (key == 'g')
+        {
+            if (g_pending)
+            {
+                set_scroll_position(0);
+                g_pending = 0;
+                return;
+            }
+
+            g_pending = 1;
+            return;
+        }
+
         if (g_pending)
         {
-            set_scroll_position(0);
             g_pending = 0;
             return;
         }
 
-        g_pending = 1;
-        return;
+        switch (key)
+        {
+            case 3: /* ctrl-c */
+            case 4: /* ctrl-d */
+            case 27: /* escape */
+            case 'q':
+            case 'Q':
+                exit(EXIT_SUCCESS);
+            case 'b':
+                page_back();
+                break;
+            case 6: /* ctrl-f */
+                display_mode = D_SEARCH;
+                glutPostRedisplay();
+                break;
+            case 'f':
+                page_forward();
+                break;
+            case 'i':
+                doc_scale *= 1.1;
+                glutReshapeWindow(fitting_window_width(doc_scale), window_height);
+                break;
+            case 'o':
+                doc_scale *= 0.9;
+                glutReshapeWindow(fitting_window_width(doc_scale), window_height);
+                break;
+            case 'k':
+                set_scroll_position(page->scroll_position - scroll_amount);
+                break;
+            case 'j':
+                set_scroll_position(page->scroll_position + scroll_amount);
+                break;
+            case 'G':
+                set_scroll_position(1000000000);
+                break;
+            case ' ':
+                {
+                    int mod = glutGetModifiers();
+
+                    if (mod & GLUT_ACTIVE_SHIFT)
+                        set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+                    else
+                        set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
+                }
+                break;
+            default:
+                break;
+        }
     }
-
-    if (g_pending)
+    else if (display_mode == D_SEARCH)
     {
-        g_pending = 0;
-        return;
-    }
-
-    switch (key)
-    {
-        case 3: /* ctrl-c */
-        case 4: /* ctrl-d */
-        case 27: /* escape */
-        case 'q':
-        case 'Q':
-            exit(EXIT_SUCCESS);
-        case 'b':
-            page_back();
-            break;
-        case 'f':
-            page_forward();
-            break;
-        case 'i':
-            doc_scale *= 1.1;
-            glutReshapeWindow(fitting_window_width(doc_scale), window_height);
-            break;
-        case 'o':
-            doc_scale *= 0.9;
-            glutReshapeWindow(fitting_window_width(doc_scale), window_height);
-            break;
-        case 'k':
-            set_scroll_position(page->scroll_position - scroll_amount);
-            break;
-        case 'j':
-            set_scroll_position(page->scroll_position + scroll_amount);
-            break;
-        case 'G':
-            set_scroll_position(1000000000);
-            break;
-        case ' ':
-            {
-                int mod = glutGetModifiers();
-
-                if (mod & GLUT_ACTIVE_SHIFT)
-                    set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
-                else
-                    set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
-            }
-            break;
-        default:
-            break;
+        switch (key)
+        {
+            case 3: /* ctrl-c */
+            case 4: /* ctrl-d */
+            case 27: /* escape */
+                exit(EXIT_SUCCESS);
+            case '\n':
+            case '\r':
+                /* open selected manpage */
+                if (results_selected_index < matches_count)
+                {
+                    const char *key = manpage_names[matches[results_selected_index].idx];
+                    char *test;
+                    if (hashmap_get(manpage_database, key, strlen(key), (void **)&test) == MAP_OK)
+                    {
+                        open_new_page(test);
+                    }
+                }
+                break;
+            case '\b':
+                {
+                    int len = strlen(search_term);
+                    if (len > 0)
+                    {
+                        search_term[len - 1] = 0;
+                        update_search();
+                        glutPostRedisplay();
+                    }
+                }
+                break;
+            default:
+                strcat(search_term, (char[]){key, 0});
+                update_search();
+                glutPostRedisplay();
+                break;
+        }
     }
 }
 
 void special_func(int key, int x, int y)
 {
-    switch (key)
+    switch (display_mode)
     {
-        case GLUT_KEY_UP:
-            set_scroll_position(page->scroll_position - scroll_amount);
+        case D_MANPAGE:
+            switch (key)
+            {
+                case GLUT_KEY_UP:
+                    set_scroll_position(page->scroll_position - scroll_amount);
+                    break;
+                case GLUT_KEY_DOWN:
+                    set_scroll_position(page->scroll_position + scroll_amount);
+                    break;
+                case GLUT_KEY_PAGE_UP:
+                    set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+                    break;
+                case GLUT_KEY_PAGE_DOWN:
+                    set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
+                    break;
+                case GLUT_KEY_HOME:
+                    set_scroll_position(0);
+                    break;
+                case GLUT_KEY_END:
+                    set_scroll_position(1000000000);
+                    break;
+                default:
+                    break;
+            }
             break;
-        case GLUT_KEY_DOWN:
-            set_scroll_position(page->scroll_position + scroll_amount);
-            break;
-        case GLUT_KEY_PAGE_UP:
-            set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
-            break;
-        case GLUT_KEY_PAGE_DOWN:
-            set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
-            break;
-        case GLUT_KEY_HOME:
-            set_scroll_position(0);
-            break;
-        case GLUT_KEY_END:
-            set_scroll_position(1000000000);
-            break;
-        default:
+        case D_SEARCH:
+            switch (key)
+            {
+                case GLUT_KEY_UP:
+                    if (results_selected_index > 0)
+                    {
+                        results_selected_index--;
+                        if (results_selected_index < results_view_offset)
+                            results_view_offset = results_selected_index;
+
+                        glutPostRedisplay();
+                    }
+                    break;
+                case GLUT_KEY_DOWN:
+                    if (results_selected_index < (matches_count - 1))
+                    {
+                        results_selected_index++;
+                        if (results_selected_index > (results_view_offset + results_shown_lines - 1))
+                            results_view_offset = results_selected_index - results_shown_lines + 1;
+
+                        glutPostRedisplay();
+                    }
+                    break;
+                case GLUT_KEY_HOME:
+                    //set_scroll_position(0);
+                    break;
+                case GLUT_KEY_END:
+                    //set_scroll_position(1000000000);
+                    break;
+                default:
+                    break;
+            }
             break;
     }
 }
@@ -1418,6 +1764,7 @@ static int make_manpage_database(void)
                             free(test);
                         }
                         hashmap_put(manpage_database, key, strlen(key), file);
+                        sb_push(manpage_names, strdup(key));
                     }
                 }
             }
@@ -1572,6 +1919,8 @@ void open_new_page(const char *filename)
     }
 
     page = new_page;
+    if (display_mode == D_SEARCH)
+        display_mode = D_MANPAGE;
     update_window_title();
     update_scrollbar();
     glutPostRedisplay();
@@ -1618,7 +1967,12 @@ int main(int argc, char *argv[])
         const char *filename = NULL;
         char tmp_filename[1024];
 
-        if (strcmp(argv[1], "-f") == 0)
+        if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0))
+        {
+            print_usage(argv[0]);
+            exit(EXIT_SUCCESS);
+        }
+        else if (strcmp(argv[1], "-f") == 0)
         {
             if (argc >= 3)
             {
@@ -1675,7 +2029,8 @@ int main(int argc, char *argv[])
     }
 
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE);
+    glutInitDisplayMode(0);
+    //glutInitDisplayMode(GLUT_DOUBLE);
     glutInitWindowSize(fitting_window_width(doc_scale), 600);
 
     glutCreateWindow(window_title);
