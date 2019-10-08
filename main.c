@@ -1060,7 +1060,15 @@ void render(void)
 
                 {
                     char tmp[128];
-                    sprintf(tmp, "%d matches", matches_count);
+                    if (matches_count == 1)
+                    {
+                        sprintf(tmp, "1 match");
+                    }
+                    else
+                    {
+                        sprintf(tmp, "%d matches", matches_count);
+                    }
+
                     set_color(COLOR_INDEX_DIM);
                     draw_string(tmp, window_width / 2 - strlen(tmp) * character_width(doc_scale) / 2 + 4, 130 + 4 + results_shown_lines * search_height, doc_scale);
                 }
