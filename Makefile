@@ -71,6 +71,10 @@ MANGL_SOURCES = mandoc/tree.c \
 mangl: $(COMPAT_OBJS) $(LIBMANDOC_OBJS) $(MANGL_SOURCES)
 	$(CC) -o $@ $(COMPAT_OBJS) $(LIBMANDOC_OBJS) $(MANGL_SOURCES) $(LDFLAGS)
 
+.PHONY: install
+install: mangl
+	cp mangl /usr/local/bin/
+
 .PHONY: clean
 clean:
 	rm -f mangl
