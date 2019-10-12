@@ -7,8 +7,8 @@ This is a graphical man page viewer based on mandoc (https://mandoc.bsd.lv/).
 It uses OpenGL to display man pages with clickable hyperlinks and smooth scrolling.
 
 Features:
-* links to other manpages
-* browsing history with `f` and `b` commands for forwards and backwards
+* hyperlinks to other man pages
+* browsing history
 * colored text
 * draggable scrollbar
 * keyboard and mouse interaction
@@ -36,7 +36,7 @@ cd ..
 make
 ```
 
-If it fails check the Makefile for proper inclusion of GL libraries.
+If it fails, please check the Makefile for proper inclusion of OpenGL libraries.
 
 Run
 ```
@@ -47,11 +47,11 @@ to copy the executable to `/usr/local/bin/` or copy and use the `mangl` binary a
 ## Keyboard commands
 
 * scrolling one step: `j`, `k`, `up-arrow`, `down-arrow`
-* scrolling whole page: `space`, `shift-space`, `page-up`, `page-down`
-* scrolling to the beginning or the end of the page: `gg`, `G`, `Home`, `End`
-* to go to previous man page: `b` or `right-mouse-click`
-* to go to to the next man page: `left-mouse-click` on the link or `f` to go to the page opened before going back
-* go to search screen: `Ctrl-f`
+* scrolling one whole page: `space`, `shift-space`, `page-up`, `page-down`
+* scrolling to the beginning or the end of the man page: `gg`, `G`, `Home`, `End`
+* to go to the previous man page: `b` or `right-mouse-click`
+* to go to the next man page: `left-mouse-click` on the link or `f` to go to the page opened before going back
+* to go to search screen: `Ctrl-f`
 * to quit: `q`, `Ctrl-c`, `Ctrl-d`
 
 ## Command line arguments
