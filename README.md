@@ -44,7 +44,7 @@ sudo make install
 ```
 to copy the executable to `/usr/local/bin/` or copy and use the `mangl` binary as you like.
 
-## Keyboard commands
+## Keyboard & mouse commands
 
 * scrolling one step: `j`, `k`, `up-arrow`, `down-arrow`
 * scrolling one whole page: `space`, `shift-space`, `page-up`, `page-down`
