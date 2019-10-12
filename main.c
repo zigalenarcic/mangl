@@ -1886,7 +1886,7 @@ struct manpage *load_manpage(const char *filename)
 
 void update_window_title()
 {
-    char window_title[256];
+    char window_title[576];
 
     if (strlen(page->manpage_name) > 0)
     {
@@ -1960,7 +1960,7 @@ void page_forward(void)
 
 int main(int argc, char *argv[])
 {
-    char window_title[256];
+    char window_title[576];
     manpage_database = hashmap_new();
 
     make_manpage_database();
