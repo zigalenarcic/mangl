@@ -8,10 +8,10 @@ It uses OpenGL to display man pages with clickable hyperlinks and smooth scrolli
 
 Features:
 * links to other manpages
-* stack browsing (history) with `f` and `b` commands for forwards and backwards
+* browsing history with `f` and `b` commands for forwards and backwards
 * colored text
 * draggable scrollbar
-* keyboard commands: `q` quit, scrolling with `j`, `k`, `space`, `shift-space`, `gg`, `G`
+* keyboard and mouse interaction
 
 ## Building
 
@@ -38,5 +38,27 @@ make
 
 If it fails check the Makefile for proper inclusion of GL libraries.
 
-Copy and use `mangl` binary as you like.
+Run
+```
+sudo make install
+```
+to copy the executable to `/usr/local/bin/` or copy and use the `mangl` binary as you like.
+
+## Keyboard commands
+
+* scrolling one step: `j`, `k`, `up-arrow`, `down-arrow`
+* scrolling whole page: `space`, `shift-space`, `page-up`, `page-down`
+* scrolling to the beginning or the end of the page: `gg`, `G`, `Home`, `End`
+* to go to previous man page: `b` or `right-mouse-click`
+* to go to to the next man page: `left-mouse-click` on the link or `f` to go to the page opened before going back
+* go to search screen: `Ctrl-f`
+* to quit: `q`, `Ctrl-c`, `Ctrl-d`
+
+## Command line arguments
+
+```
+mangl     - open the viewer in search mode
+mangl [man page name] - open the viewer in man page mode with man page opened
+mangl [section name] [man page name] - open the man page from the specified section, e.g. mangl 3 printf
+```
 
