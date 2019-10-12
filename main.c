@@ -250,6 +250,8 @@ void add_to_span(struct span *s, int letter)
         letter = ' ';
     else if ((letter == 0x201c) || (letter == 0x201d)) /* left and right double quotation mark */
         letter = '"';
+    else if ((letter == 0x2018) || (letter == 0x2019)) /* left and right single quotation mark */
+        letter = '\'';
 
     if (letter < 256)
     {
