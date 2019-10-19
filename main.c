@@ -1,7 +1,7 @@
 /*
  * main.c
  *
- * Implementation of mangl graphical man pages viewer
+ * Implementation of mangl graphical man page viewer
  *
  * Initial commit: 2019-09-07
  *
