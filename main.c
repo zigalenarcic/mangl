@@ -670,7 +670,7 @@ float color_table[][3] = {
     {0.15, 0.15, 0.15},
     {0.27, 0.27, 0.27},
     {0.33, 0.33, 0.33},
-    {0.2, 0.2, 0.2},
+    {0.2, 0.0, 1.0},
     {235.0f/255.0f, 180.0f/255.0f, 112.0f/255.0f},
 };
 
@@ -683,7 +683,7 @@ enum {
     COLOR_INDEX_SCROLLBAR_BACKGROUND,
     COLOR_INDEX_SCROLLBAR_THUMB,
     COLOR_INDEX_SCROLLBAR_THUMB_HOVER,
-    COLOR_INDEX_LINK_BACKGROUND,
+    COLOR_INDEX_LINK,
     COLOR_INDEX_PAGE_BORDER,
 };
 
@@ -956,8 +956,6 @@ void render(void)
     {
         case D_MANPAGE:
             {
-                render_manpage(page);
-
                 /* draw document border */
                 int border_margin = document_margin * 3 / 8 + 1;
                 set_color(COLOR_INDEX_PAGE_BORDER);
@@ -967,7 +965,6 @@ void render(void)
                 /* draw link hovering */
                 {
                     int link_number = sb_count(page->links);
-                    set_color(COLOR_INDEX_FOREGROUND);
                     for (int i = 0; i < link_number; i++)
                     {
                         recti r = page->links[i].document_rectangle;
@@ -981,17 +978,16 @@ void render(void)
                         {
                             if (page->links[i].highlight)
                             {
-                                //draw_rectangle_outline(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
-                                glEnable(GL_BLEND);
-                                glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-                                glBlendEquation(GL_FUNC_ADD);
-                                glColor4f(0.2f, 0.0f, 1.0f, 0.3f);
-                                draw_rectangle(r.x, r.y, r.x2 - r.x, r.y2 - r.y);
-                                glDisable(GL_BLEND);
+                                set_color(COLOR_INDEX_LINK);
+                                int link_border = 1;
+                                draw_rectangle_outline(r.x - link_border, r.y - link_border,
+                                        r.x2 - r.x + 2 * link_border, r.y2 - r.y + 2 * link_border);
                             }
                         }
                     }
                 }
+
+                render_manpage(page);
 
                 /* draw the scrollbar */
                 set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
