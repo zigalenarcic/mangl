@@ -1420,7 +1420,6 @@ void keyboard_func(unsigned char key, int x, int y)
         {
             case 3: /* ctrl-c */
             case 4: /* ctrl-d */
-            case 27: /* escape */
             case 'q':
             case 'Q':
                 exit(EXIT_SUCCESS);
@@ -1471,7 +1470,6 @@ void keyboard_func(unsigned char key, int x, int y)
         {
             case 3: /* ctrl-c */
             case 4: /* ctrl-d */
-            case 27: /* escape */
                 exit(EXIT_SUCCESS);
             case '\n':
             case '\r':
@@ -1492,6 +1490,17 @@ void keyboard_func(unsigned char key, int x, int y)
                     if (len > 0)
                     {
                         search_term[len - 1] = 0;
+                        update_search();
+                        glutPostRedisplay();
+                    }
+                }
+                break;
+            case 27: /* escape */
+                {
+                    int len = strlen(search_term);
+                    if (len > 0)
+                    {
+                        search_term[0] = 0;
                         update_search();
                         glutPostRedisplay();
                     }
