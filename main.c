@@ -1767,7 +1767,7 @@ static int make_manpage_database(void)
                     if (get_page_name_and_section(globinfo.gl_pathv[i], page_name, section_name) == 0)
                     {
                         // successful parse
-                        char key[512];
+                        char key[576];
                         sprintf(key, "%s(%s)", page_name, section_name);
 
                         char *file = strdup(globinfo.gl_pathv[i]);
