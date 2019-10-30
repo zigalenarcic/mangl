@@ -91,5 +91,5 @@ mangl [section name] [man page name] - open the man page from the specified sect
 
 ## License
 
-Mangl is licesend under the BSD 2-clause license.
+Mangl is licensed under the BSD 2-clause license.
 
