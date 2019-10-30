@@ -1,7 +1,7 @@
 /*
  * main.c
  *
- * Implementation of mangl graphical man page viewer
+ * Implementation of 'mangl' - a graphical man page viewer
  *
  * Initial commit: 2019-09-07
  *
@@ -27,6 +27,9 @@
 #include <GL/glut.h>
 #endif
 
+#include "ft2build.h"
+#include FT_FREETYPE_H
+
 #include "stretchy_buffer.h"
 #include "hashmap.h"
 
@@ -40,62 +43,43 @@
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define ZMALLOC(type, n) ((type *)calloc(n, sizeof(type)))
-
-#define FONT_TEXTURE_SIZE 256
-const static unsigned int font_image_width = 112;
-const static unsigned int font_image_height = 84;
-
-#include "font_image.h"
+#define MAX(x,y) (((x) > (y)) ? (x) : (y))
+#define MIN(x,y) (((x) < (y)) ? (x) : (y))
 
 enum DISPLAY_MODES {
     D_MANPAGE = 0,
     D_SEARCH = 1
 };
 
-int display_mode = D_MANPAGE;
-char search_term[512];
+enum DIMENSIONS {
+    DIM_SCROLLBAR_WIDTH = 0,
+    DIM_SCROLLBAR_THUMB_MARGIN,
+    DIM_SCROLLBAR_THUMB_MIN_HEIGHT,
+    DIM_DOCUMENT_MARGIN,
+    DIM_SEARCH_WIDTH,
+    DIM_SCROLL_AMOUNT,
+    DIM_GUI_PADDING,
+    DIM_TEXT_HORIZONTAL_MARGIN,
+};
 
-char **manpage_names;
+static const int dimensions[] =
+{
+/*scrollbar_width        */ 12,
+/*scrollbar_thumb_margin */ 0,
+/*scrollbar_thumb_min_height*/ 20,
+/*document_margin        */ 29,
+/*search_width           */ 300,
+/*scroll amount          */ 40,
+/*gui padding            */ 9,
+/*text horizontal margin */ 4,
+};
 
-#define N_SHOWN_RESULTS 12
-int results_selected_index = 0;
-int results_shown_lines = N_SHOWN_RESULTS;
-int results_view_offset = 0;
-const static int search_width = 300;
-
-struct {
-    int idx;
-    int goodness;
-} matches[100];
-int matches_count = 0;
-
-const unsigned int font_char_width = 7;
-const unsigned int font_char_height = 14;
-
-const static int scrollbar_width = 12;
-const static int scrollbar_thumb_margin = 0;
-
-int scrollbar_thumb_position;
-int scrollbar_thumb_size;
-int scrollbar_thumb_hover;
-
-int scrollbar_dragging = 0;
-int scrollbar_thumb_mouse_down_y = 0;
-int scrollbar_thumb_mouse_down_thumb_position = 0;
-const static int document_margin = 29;
-
-int window_width;
-int window_height;
-
-GLuint font_texture;
-
-float doc_scale = 0.5f;
-int scroll_amount = 40;
-
-map_t manpage_database;
-
-void terminal_mdoc(void *, const struct roff_meta *);
-void terminal_man(void *, const struct roff_meta *);
+#define FONT_TEXTURE_SIZE 256
+const static unsigned int font_image_width = 112;
+const static unsigned int font_image_height = 84;
+const static unsigned int font_char_width = 7;
+const static unsigned int font_char_height = 14;
+#include "font_image.h"
 
 typedef struct {
     int x;
@@ -110,16 +94,397 @@ typedef struct {
     char link[256];
 } link_t;
 
-bool inside_recti(recti r, int x, int y)
+typedef struct CharDescription_
 {
-    return (x >= r.x) && (y >= r.y) && (x < r.x2) && (y < r.y2);
-}
+    int available;
+    float tex_coord0_x;
+    float tex_coord0_y;
+    float tex_coord1_x;
+    float tex_coord1_y;
+
+    int width;
+    int height;
+    int top;
+    int left;
+    int advance;
+} CharDescription;
+
+typedef struct FontData_
+{
+    uint8_t *bitmap;
+    int bitmap_width;
+    int bitmap_height;
+    CharDescription chars[128];
+    int character_width;
+    int character_height;
+    int line_height;
+    double font_size;
+    GLuint texture_id;
+} FontData;
+
+FontData builtinFont = {
+    .bitmap = NULL,
+    .bitmap_width = 0,
+    .bitmap_height = 0,
+    .character_width = 6, // actual width and height
+    .character_height = 9,
+    .line_height = font_char_height,
+    .font_size = 10.0,
+    .texture_id = 0
+};
+
+FontData *mainFont = &builtinFont;
+
+FontData *loadedFont;
+
+struct {
+    char font_file[512];
+    int font_size;
+    double gui_scale;
+    double line_spacing;
+} settings = { .font_size = 10, .gui_scale = 1.0, .line_spacing = 1.0};
+
+int display_mode = D_MANPAGE;
+char search_term[512];
+
+char **manpage_names;
+
+#define N_SHOWN_RESULTS 12
+int results_selected_index = 0;
+int results_shown_lines = N_SHOWN_RESULTS;
+int results_view_offset = 0;
+
+struct {
+    int idx;
+    int goodness;
+} matches[100];
+
+int matches_count = 0;
+
+int scrollbar_thumb_position;
+int scrollbar_thumb_size;
+int scrollbar_thumb_hover;
+
+int scrollbar_dragging = 0;
+int scrollbar_thumb_mouse_down_y = 0;
+int scrollbar_thumb_mouse_down_thumb_position = 0;
+
+int initial_window_rows = 40;
+
+int window_width;
+int window_height;
+
+map_t manpage_database;
+
+FT_Library library;
+
+void terminal_mdoc(void *, const struct roff_meta *);
+void terminal_man(void *, const struct roff_meta *);
 
 double clamp(double val, double min, double max)
 {
     if (val > max) return max;
     if (val < min) return min;
     return val;
+}
+
+bool inside_recti(recti r, int x, int y)
+{
+    return (x >= r.x) && (y >= r.y) && (x < r.x2) && (y < r.y2);
+}
+
+unsigned round_to_power_of_2(unsigned x)
+{
+    for (int i = 31; i >= 0; i--)
+    {
+        if (x == (1 << i))
+            return 1 << i;
+
+        if ((x & (1 << i)) != 0)
+            return 1 << (i + 1);
+    }
+
+    return 0;
+}
+
+int get_font_file(char *font)
+{
+    FILE *f = fopen(font, "rb");
+
+    if (f)
+    {
+        fclose(f);
+        return 1;
+    }
+
+    char cmd[512];
+    snprintf(cmd, sizeof(cmd), "fc-match --format=%%{file} \"%s\"", font);
+
+    FILE *proc = popen(cmd, "r");
+
+    int proc_fd = fileno(proc);
+    /* wait for output */
+
+    fd_set fd_s;
+    FD_ZERO(&fd_s);
+    FD_SET(proc_fd, &fd_s);
+
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 100 * 1000;
+
+    int ret = select(proc_fd + 1, &fd_s, NULL, NULL, &timeout);
+
+    if (ret > 0)
+    {
+        /* read the output */
+        if (proc != NULL)
+        {
+            char tmp_out[1024];
+            char *ptr = fgets(tmp_out, sizeof(tmp_out), proc);
+            pclose(proc);
+
+            if (ptr)
+            {
+                strcpy(font, ptr);
+                return 1;
+            }
+        }
+    }
+
+    return 0;
+}
+
+void copy_bitmap(uint8_t *dst, int w_dst, int h_dst, int x, int y, const uint8_t *src, int w_src, int h_src, int pitch_src)
+{
+    for (int j = 0; j < h_src; j++)
+    {
+        if ((j + y) >= h_dst)
+            break;
+
+        int bytes_to_copy = w_src;
+        if ((bytes_to_copy + x) > w_dst)
+        {
+            bytes_to_copy = w_dst - x; // clip
+        }
+
+        memcpy(&dst[(j + y) * w_dst + x], &src[j * pitch_src], bytes_to_copy);
+    }
+}
+
+void copy_bitmap_1bit(uint8_t *dst, int w_dst, int h_dst, int x, int y, const uint8_t *src, int w_src, int h_src, int pitch_src)
+{
+    for (int j = 0; j < h_src; j++)
+    {
+        if ((j + y) >= h_dst)
+            break;
+
+        for (int i = 0; i < w_src; i++)
+        {
+            if ((x + i) >= w_dst)
+                break;
+            int byte = i / 8;
+            int bit = 7 - (i % 8);
+            dst[(j + y) * w_dst + x + i] = (src[j * pitch_src + byte] & (1U << bit)) ? 255 : 0;
+        }
+    }
+}
+
+int get_dimension(int dimension_index)
+{
+    /* at 10 pt font is 6x9 pixels */
+    switch (dimension_index)
+    {
+        case DIM_DOCUMENT_MARGIN:
+        case DIM_SCROLL_AMOUNT:
+        case DIM_GUI_PADDING:
+            {
+                double font_scale = mainFont->character_height / 9.0;
+                return (int)(font_scale * dimensions[dimension_index]);
+            }
+
+        case DIM_SEARCH_WIDTH:
+        case DIM_TEXT_HORIZONTAL_MARGIN:
+            {
+                double font_horizontal_scale = mainFont->character_width / 6.0;
+                return (int)(font_horizontal_scale * dimensions[dimension_index]);
+            }
+
+        case DIM_SCROLLBAR_WIDTH:
+        case DIM_SCROLLBAR_THUMB_MARGIN:
+        case DIM_SCROLLBAR_THUMB_MIN_HEIGHT:
+        default:
+            return (int)(settings.gui_scale * dimensions[dimension_index]);
+
+    }
+}
+
+int init_freetype(void)
+{
+    int error = FT_Init_FreeType(&library);
+    if (error)
+    {
+        fprintf(stderr, "Failed to initialize freetype\n");
+        exit(EXIT_FAILURE);
+    }
+    return 0;
+}
+
+int render_font_texture(const char *font_file, int font_size_px)
+{
+    FT_Face face;
+
+    FILE *f = fopen(font_file, "rb");
+    if (f == NULL)
+    {
+        fprintf(stderr, "Font file missing: \"%s\"\n", font_file);
+        return -1;
+    }
+    else
+    {
+        fclose(f);
+    }
+
+    int error = FT_New_Face(library, font_file, 0,  &face);
+    if (error == FT_Err_Unknown_File_Format)
+    {
+        fprintf(stderr, "Unknown font format: %s\n", font_file);
+        return -1;
+    }
+    else if (error)
+    {
+        fprintf(stderr, "File not found: %s\n", font_file);
+        return -1;
+    }
+    else
+    {
+        //printf("Font \"%s\" loaded\n", font_file);
+    }
+
+    //error = FT_Set_Pixel_Sizes(face, 0, font_size_px);
+    error = FT_Set_Char_Size(face, 0, font_size_px * 64, 96, 96);
+    if (error)
+    {
+        fprintf(stderr, "FT_Set_Char_Size error: %d\n", error);
+        return -1;
+    }
+
+    int font_width = 0;
+    int font_height = 0;
+
+    /* get character size of X, H */
+    const char *str = "XH";
+    while (*str)
+    {
+        int glyph_index = FT_Get_Char_Index(face, *str);
+        str++;
+        if (glyph_index > 0)
+        {
+            FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+            error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+            if (error)
+            {
+                fprintf(stderr, "FT_Render_Glyph: Glyph render error: %d\n", error);
+            }
+
+            FT_Bitmap *bmp = &face->glyph->bitmap;
+
+            font_width = MAX(font_width, bmp->width);
+            font_height = MAX(font_height, bmp->rows);
+        }
+    }
+
+    if ((font_width <= 0) || (font_height <= 0))
+    {
+        fprintf(stderr, "Failed to determine font size\n");
+        return -1;
+    }
+
+    /* now allocate a texture of a good size */
+
+    FontData *font = ZMALLOC(FontData, 1);
+
+    font->font_size = font_size_px;
+    font->character_width = font_width;
+    font->character_height = font_height;
+    font->line_height = face->size->metrics.height / 64 + 1; /* add 1 px of line height to make text more breathy */
+
+    font->bitmap_width = round_to_power_of_2(16 * (font_width + 2));
+    font->bitmap_height = round_to_power_of_2(6 * (font_height * 2));
+    font->bitmap_width = MAX(font->bitmap_width, font->bitmap_height);
+    font->bitmap_height = MAX(font->bitmap_width, font->bitmap_height);
+
+    font->bitmap = ZMALLOC(uint8_t, font->bitmap_width * font->bitmap_height);
+
+    for (int i = 32; i < 128; i++)
+    {
+        int glyph_index = FT_Get_Char_Index(face, i);
+        if (glyph_index > 0)
+        {
+            FT_Load_Glyph(face, glyph_index, FT_LOAD_DEFAULT);
+
+            error = FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL);
+            if (error)
+            {
+                fprintf(stderr, "FT_Render_Glyph: Glyph render error: %d\n", error);
+                continue;
+            }
+
+            FT_Bitmap *bmp = &face->glyph->bitmap;
+
+            int w = bmp->width;
+            int h = bmp->rows;
+            int pitch = bmp->pitch;
+            int left = face->glyph->bitmap_left;
+            int top = face->glyph->bitmap_top;
+
+            //printf("w %d h %d pitch %d left %d top %d\n", w, h, pitch, left, top);
+
+            int col = i % 16;
+            int row = i / 16;
+            int dst_x = col * (font_width + 2) + left + 1;
+            int dst_y = row * (font_height * 2) - top;
+
+
+            font->chars[i].available = 1;
+            font->chars[i].top = top;
+            font->chars[i].left = left;
+            font->chars[i].width = w;
+            font->chars[i].height = h;
+            font->chars[i].advance = face->glyph->advance.x / 64;
+
+            const float pixel_x = 1.0f / font->bitmap_width;
+            const float pixel_y = 1.0f / font->bitmap_height;
+
+            font->chars[i].tex_coord0_x = pixel_x * dst_x;
+            font->chars[i].tex_coord0_y = pixel_y * dst_y;
+            font->chars[i].tex_coord1_x = pixel_x * (dst_x + w);
+            font->chars[i].tex_coord1_y = pixel_y * (dst_y + h);
+
+            if (bmp->pixel_mode == FT_PIXEL_MODE_GRAY)
+                copy_bitmap(font->bitmap, font->bitmap_width, font->bitmap_height, dst_x, dst_y, bmp->buffer, w, h, pitch);
+            else if (bmp->pixel_mode == FT_PIXEL_MODE_MONO)
+            {
+                // monochrome
+                copy_bitmap_1bit(font->bitmap, font->bitmap_width, font->bitmap_height, dst_x, dst_y, bmp->buffer, w, h, pitch);
+            }
+            else
+            {
+                printf("Unsupported pixel mode (not 8 bit or 1 bit)\n");
+            }
+
+        }
+        else
+        {
+            //printf("no glyph for %d\n", i);
+            continue;
+        }
+    }
+
+    FT_Done_Face(face);
+    loadedFont = font;
+
+    return 0;
 }
 
 void print_usage(const char *exe)
@@ -475,24 +840,38 @@ void display_manpage_stdout(struct manpage *p)
     printf(".END OF MANPAGE\n");
 }
 
-int line_height(float scale)
+int get_line_advance(void)
 {
-    return font_char_height;
+    if (mainFont)
+        return (int)(settings.line_spacing * mainFont->line_height);
+
+    return 2 * font_char_height;
 }
 
-int character_width(float scale)
+int get_line_height(void)
 {
+    if (mainFont)
+        return (int)(mainFont->line_height);
+
+    return 2 * font_char_height;
+}
+
+int get_character_width(void)
+{
+    if (mainFont)
+        return mainFont->chars['X'].advance;
+
     return font_char_width;
 }
 
 int document_width(void)
 {
-    return 2 * document_margin + ((78 + 2) * character_width(doc_scale));
+    return 2 * get_dimension(DIM_DOCUMENT_MARGIN) + ((78 + 2) * get_character_width());
 }
 
 int document_height(void)
 {
-    return page->document.n_lines * line_height(doc_scale) + 2 * document_margin;
+    return page->document.n_lines * get_line_advance() + 2 * get_dimension(DIM_DOCUMENT_MARGIN);
 }
 
 void find_links(struct manpage *p)
@@ -510,7 +889,7 @@ void find_links(struct manpage *p)
         {
             if (s->length > 0)
             {
-                //draw_string(s->buffer, document_margin, document_margin + vertical_position - page->scroll_position, doc_scale);
+                //draw_string(s->buffer, get_dimension(DIM_DOCUMENT_MARGIN), get_dimension(DIM_DOCUMENT_MARGIN) + vertical_position - page->scroll_position);
 
                 int pos = 0;
 
@@ -574,10 +953,10 @@ void find_links(struct manpage *p)
                             {
                                 /* we have a link */
                                 link_t l;
-                                l.document_rectangle.x = ((intptr_t)str - (intptr_t)line + 1 - strlen(current_word)) * character_width(doc_scale);
-                                l.document_rectangle.y = i * line_height(doc_scale);
-                                l.document_rectangle.x2 = l.document_rectangle.x + strlen(current_word) * character_width(doc_scale);
-                                l.document_rectangle.y2 = l.document_rectangle.y + line_height(doc_scale);
+                                l.document_rectangle.x = ((intptr_t)str - (intptr_t)line + 1 - strlen(current_word)) * get_character_width();
+                                l.document_rectangle.y = i * get_line_advance();
+                                l.document_rectangle.x2 = l.document_rectangle.x + strlen(current_word) * get_character_width();
+                                l.document_rectangle.y2 = l.document_rectangle.y + get_line_height();
 
                                 strcpy(l.link, tmp);
                                 l.highlight = 0;
@@ -599,10 +978,8 @@ void find_links(struct manpage *p)
             s = s->next;
         }
 
-        vertical_position += line_height(doc_scale);
-
+        vertical_position += get_line_advance();
     }
-
 }
 
 void update_scrollbar(void)
@@ -613,7 +990,7 @@ void update_scrollbar(void)
     int doc_height = document_height();
     int thumb_size_tmp = (double)window_height / (doc_height - 1) * window_height;
 
-    scrollbar_thumb_size = clamp(thumb_size_tmp, 20, window_height);
+    scrollbar_thumb_size = clamp(thumb_size_tmp, get_dimension(DIM_SCROLLBAR_THUMB_MIN_HEIGHT), window_height);
     //scrollbar_thumb_position = round((double)page->scroll_position / (doc_height - 1) * window_height);
     scrollbar_thumb_position = round((double)page->scroll_position / (doc_height - window_height) * (window_height - scrollbar_thumb_size));
 }
@@ -623,7 +1000,7 @@ int scrollbar_thumb_position_to_scroll_position(int thumb_position)
     int doc_height = document_height();
     int thumb_size_tmp = (double)window_height / (doc_height - 1) * window_height;
 
-    scrollbar_thumb_size = clamp(thumb_size_tmp, 20, window_height);
+    scrollbar_thumb_size = clamp(thumb_size_tmp, get_dimension(DIM_SCROLLBAR_THUMB_MIN_HEIGHT), window_height);
 
     int scrollbar_height = window_height;
 
@@ -634,8 +1011,6 @@ int scrollbar_thumb_position_to_scroll_position(int thumb_position)
 
 void reshape(int w, int h)
 {
-    //printf("Reshape %d x %d\n", w, h);
-
     window_width = w;
     window_height = h;
 
@@ -656,9 +1031,15 @@ void reshape(int w, int h)
     update_scrollbar();
 }
 
-int fitting_window_width(float scale)
+int fitting_window_width(void)
 {
-    return 2 * document_margin + ((78 + 2) * character_width(scale)) + scrollbar_width;
+    return 2 * get_dimension(DIM_DOCUMENT_MARGIN) +
+        ((78 + 2) * get_character_width()) + get_dimension(DIM_SCROLLBAR_WIDTH);
+}
+
+int fitting_window_height(int num_rows)
+{
+    return num_rows * get_line_advance();
 }
 
 float color_table[][3] = {
@@ -666,11 +1047,11 @@ float color_table[][3] = {
     {232.0f/255.0f, 232.0f/255.0f, 211.0f/255.0f},
     {143.0f/255.0f, 191.0f/255.0f, 220.0f/255.0f},
     {255.0f/255.0f, 185.0f/255.0f, 100.0f/255.0f},
-    {0.4, 0.4, 0.4},
-    {0.15, 0.15, 0.15},
-    {0.27, 0.27, 0.27},
-    {0.33, 0.33, 0.33},
-    {0.2, 0.0, 1.0},
+    {101.0f/255.0f, 101.0f/255.0f, 101.0f/255.0f},
+    {38.0f/255.0f, 38.0f/255.0f, 38.0f/255.0f},
+    {69.0f/255.0f, 69.0f/255.0f, 69.0f/255.0f},
+    {84.0f/255.0f, 84.0f/255.0f, 84.0f/255.0f},
+    {51.0f/255.0f, 0.0f/255.0f, 255.0f/255.0f},
     {235.0f/255.0f, 180.0f/255.0f, 112.0f/255.0f},
 };
 
@@ -724,13 +1105,13 @@ PQRSTUVWXYZ[\]^_
 pqrstuvwxyz{|}~
 */
 
-void put_char_gl(int x, int y, char c)
+int put_char_gl(int x, int y, char c)
 {
-    static const float pixel = 1.0f / FONT_TEXTURE_SIZE;
+    int ret = 0;
     int w = font_char_width;
     int h = font_char_height;
 
-    glBindTexture(GL_TEXTURE_2D, font_texture);
+    glBindTexture(GL_TEXTURE_2D, mainFont->texture_id);
     glEnable(GL_BLEND);
     glEnable(GL_TEXTURE_2D);
 
@@ -743,6 +1124,9 @@ void put_char_gl(int x, int y, char c)
     }
     else
     {
+#if 0
+        static const float pixel = 1.0f / FONT_TEXTURE_SIZE;
+
         c -= 32;
 
         char c_line = c / 16;
@@ -754,22 +1138,55 @@ void put_char_gl(int x, int y, char c)
         glTexCoord2f((c_pos + 1) * pixel * w, (c_line + 1) * h * pixel); glVertex2f(x + w, y + h);
         glTexCoord2f((c_pos + 1) * pixel * w, c_line * h * pixel); glVertex2f(x + w, y);
         glEnd();
+
+        ret = w;
+#else
+        int idx = (int)c;
+        if (mainFont->chars[idx].available)
+        {
+            int w = mainFont->chars[idx].width;
+            int h = mainFont->chars[idx].height;
+            int x_start = x + mainFont->chars[idx].left;
+            int y_start = y - mainFont->chars[idx].top + mainFont->character_height + 2;
+
+            glBegin(GL_QUADS);
+            glTexCoord2f(mainFont->chars[idx].tex_coord0_x, mainFont->chars[idx].tex_coord0_y);
+            glVertex2f(x_start, y_start);
+            glTexCoord2f(mainFont->chars[idx].tex_coord0_x, mainFont->chars[idx].tex_coord1_y);
+            glVertex2f(x_start, y_start + h);
+            glTexCoord2f(mainFont->chars[idx].tex_coord1_x, mainFont->chars[idx].tex_coord1_y);
+            glVertex2f(x_start + w, y_start + h);
+            glTexCoord2f(mainFont->chars[idx].tex_coord1_x, mainFont->chars[idx].tex_coord0_y);
+            glVertex2f(x_start + w, y_start);
+            glEnd();
+
+            ret = mainFont->chars[idx].advance;
+        }
+        else
+        {
+            glDisable(GL_BLEND);
+            draw_rectangle_outline(x + 1, y + 1, w - 2, h - 2);
+            glEnable(GL_BLEND);
+            ret = mainFont->character_width;
+        }
+#endif
     }
 
     glDisable(GL_BLEND);
+
+    return ret;
 }
 
 void print_text_gl(int x, int y, const char *str)
 {
     while (*str)
     {
-        put_char_gl(x, y, *str);
-        x += font_char_width;
+        x += put_char_gl(x, y, *str);
         str++;
     }
 }
 
-size_t draw_string_manpage(const char *str, int x, int y, float scale)
+size_t draw_string_manpage(const char *str, int x, int y)
 {
     set_color(COLOR_INDEX_FOREGROUND);
     size_t count = 0;
@@ -797,7 +1214,8 @@ size_t draw_string_manpage(const char *str, int x, int y, float scale)
                 break;
         }
 
-        put_char_gl(x + count++ * character_width(doc_scale), y, *str);
+        count++;
+        x += put_char_gl(x, y, *str);
 
         if (color_set)
         {
@@ -809,38 +1227,70 @@ size_t draw_string_manpage(const char *str, int x, int y, float scale)
     return count;
 }
 
-size_t draw_string(const char *str, int x, int y, float scale)
+size_t draw_string(const char *str, int x, int y)
 {
     size_t count = 0;
     while (*str)
     {
-        put_char_gl(x + count++ * character_width(doc_scale), y, *str);
+        count++;
+        x += put_char_gl(x, y, *str);
         str++;
     }
 
     return count;
 }
 
-void init_gl(void)
+void add_gl_texture_monochrome(GLuint *texture, int width, int height, void *data)
 {
-    glGenTextures(1, &font_texture);
-    glBindTexture(GL_TEXTURE_2D, font_texture);
-
-    unsigned char texture[FONT_TEXTURE_SIZE * FONT_TEXTURE_SIZE];
-    memset(texture, 0, sizeof(texture));
-
-    char *font_data = font_image;
-
-    for (int j = 0; j < font_image_height; j++)
-    {
-        for (int i = 0; i < font_image_width; i++)
-        {
-            texture[j * 256 + i] = (*font_data++) ? 255 : 0;
-        }
-    }
-
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, FONT_TEXTURE_SIZE, FONT_TEXTURE_SIZE, 0, GL_ALPHA, GL_UNSIGNED_BYTE, texture);
+    glGenTextures(1, texture);
+    glBindTexture(GL_TEXTURE_2D, *texture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, width, height, 0, GL_ALPHA, GL_UNSIGNED_BYTE, data);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+}
+
+
+void init_builtin_font(void)
+{
+    builtinFont.bitmap = ZMALLOC(uint8_t, FONT_TEXTURE_SIZE * FONT_TEXTURE_SIZE);
+    builtinFont.bitmap_width = FONT_TEXTURE_SIZE;
+    builtinFont.bitmap_height = FONT_TEXTURE_SIZE;
+
+    /* copy font_image into a larger texture 2^n sized buffer */
+    copy_bitmap(builtinFont.bitmap, builtinFont.bitmap_width, builtinFont.bitmap_height, 0, 0,
+            font_image, font_image_width, font_image_height, font_image_width);
+
+    /* fill information for builtin font */
+    for (int i = 32; i < 128; i++)
+    {
+        builtinFont.chars[i].available = 1;
+        builtinFont.chars[i].top = builtinFont.character_height; /* actual height of X character in px */
+        builtinFont.chars[i].left = 0;
+        builtinFont.chars[i].width = font_char_width;
+        builtinFont.chars[i].height = font_char_height;
+        builtinFont.chars[i].advance = font_char_width;
+
+        float pixel_x = 1.0f / builtinFont.bitmap_width;
+        float pixel_y = 1.0f / builtinFont.bitmap_height;
+
+        int c_col = (i - 32) % 16;
+        int c_row = (i - 32) / 16;
+
+        builtinFont.chars[i].tex_coord0_x = pixel_x * c_col * font_char_width;
+        builtinFont.chars[i].tex_coord0_y = pixel_y * c_row * font_char_height;
+        builtinFont.chars[i].tex_coord1_x = pixel_x * (c_col + 1) * font_char_width;
+        builtinFont.chars[i].tex_coord1_y = pixel_y * (c_row + 1) * font_char_height;
+    }
+}
+
+void upload_font_textures(void)
+{
+    add_gl_texture_monochrome(&builtinFont.texture_id, builtinFont.bitmap_width, builtinFont.bitmap_height, builtinFont.bitmap);
+
+    if (loadedFont)
+    {
+        add_gl_texture_monochrome(&loadedFont->texture_id, loadedFont->bitmap_width, loadedFont->bitmap_height, loadedFont->bitmap);
+    }
 }
 
 void render_manpage(struct manpage *p)
@@ -851,8 +1301,8 @@ void render_manpage(struct manpage *p)
     {
         struct span *s = p->document.lines[i];
 
-        if ((vertical_position >= (page->scroll_position - line_height(doc_scale) - document_margin)) &&
-                ((vertical_position - line_height(doc_scale)) < (page->scroll_position + window_height)))
+        if ((vertical_position >= (page->scroll_position - get_line_advance() - get_dimension(DIM_DOCUMENT_MARGIN))) &&
+                ((vertical_position - get_line_advance()) < (page->scroll_position + window_height)))
         {
             int num_chars = 0;
             while (s)
@@ -860,16 +1310,16 @@ void render_manpage(struct manpage *p)
                 if (s->length > 0)
                 {
                     num_chars += draw_string_manpage(s->buffer,
-                            document_margin + num_chars * character_width(doc_scale),
-                            document_margin + vertical_position - page->scroll_position, doc_scale);
+                            get_dimension(DIM_DOCUMENT_MARGIN) + num_chars * get_character_width(),
+                            get_dimension(DIM_DOCUMENT_MARGIN) + vertical_position - page->scroll_position);
                 }
                 s = s->next;
             }
         }
 
-        vertical_position += line_height(doc_scale);
+        vertical_position += get_line_advance();
 
-        if ((vertical_position - line_height(doc_scale)) > (page->scroll_position + window_height))
+        if ((vertical_position - get_line_advance()) > (page->scroll_position + window_height))
             break;
     }
 }
@@ -947,17 +1397,19 @@ void render(void)
 {
     glClearColor(color_table[COLOR_INDEX_BACKGROUND][0], color_table[COLOR_INDEX_BACKGROUND][1], color_table[COLOR_INDEX_BACKGROUND][2], 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glBlendEquation(GL_FUNC_ADD);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+    glDisable(GL_BLEND);
 
     switch (display_mode)
     {
         case D_MANPAGE:
             {
                 /* draw document border */
-                int border_margin = document_margin * 3 / 8 + 1;
+                int border_margin = get_dimension(DIM_DOCUMENT_MARGIN) * 3 / 8 + 1;
                 set_color(COLOR_INDEX_PAGE_BORDER);
                 draw_rectangle_outline(border_margin, border_margin - page->scroll_position,
                         document_width() - 2 * border_margin, document_height() - 2 * border_margin);
@@ -969,10 +1421,10 @@ void render(void)
                     {
                         recti r = page->links[i].document_rectangle;
 
-                        r.x += document_margin;
-                        r.x2 += document_margin;
-                        r.y += document_margin - page->scroll_position;
-                        r.y2 += document_margin - page->scroll_position;
+                        r.x += get_dimension(DIM_DOCUMENT_MARGIN);
+                        r.x2 += get_dimension(DIM_DOCUMENT_MARGIN);
+                        r.y += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
+                        r.y2 += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
 
                         if ((r.y2 >= 0) || (r.y < window_height))
                         {
@@ -991,7 +1443,7 @@ void render(void)
 
                 /* draw the scrollbar */
                 set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
-                draw_rectangle(window_width - scrollbar_width, 0, scrollbar_width, window_height);
+                draw_rectangle(window_width - get_dimension(DIM_SCROLLBAR_WIDTH), 0, get_dimension(DIM_SCROLLBAR_WIDTH), window_height);
 
                 update_scrollbar();
 
@@ -1004,8 +1456,8 @@ void render(void)
                     set_color(COLOR_INDEX_SCROLLBAR_THUMB);
                 }
 
-                draw_rectangle(window_width - scrollbar_width + scrollbar_thumb_margin, scrollbar_thumb_position,
-                        scrollbar_width - 1 * scrollbar_thumb_margin, scrollbar_thumb_size);
+                draw_rectangle(window_width - get_dimension(DIM_SCROLLBAR_WIDTH) + get_dimension(DIM_SCROLLBAR_THUMB_MARGIN), scrollbar_thumb_position,
+                        get_dimension(DIM_SCROLLBAR_WIDTH) - 1 * get_dimension(DIM_SCROLLBAR_THUMB_MARGIN), scrollbar_thumb_size);
             }
             break;
 
@@ -1013,28 +1465,27 @@ void render(void)
         default:
             {
                 set_color(COLOR_INDEX_PAGE_BORDER);
-                int search_height = font_char_height * 3 / 2;
+                int search_height = get_line_height() * 3 / 2;
 
-                draw_rectangle_outline(window_width / 2 - search_width / 2, 100,
-                        search_width, search_height);
+                int top = 100;
+                int top_result_box = top + search_height + get_dimension(DIM_GUI_PADDING);
+                int text_vertical_offset = ceil(0.5 * (search_height - get_line_height()));
+
+                draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top,
+                        get_dimension(DIM_SEARCH_WIDTH), search_height);
 
                 set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
-                draw_rectangle_outline(window_width / 2 - search_width / 2, 130,
-                        search_width, results_shown_lines * search_height);
+                draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top_result_box,
+                        get_dimension(DIM_SEARCH_WIDTH), results_shown_lines * search_height);
 
+                set_color(COLOR_INDEX_FOREGROUND);
                 const char *text = "Type to search...";
-                if (strlen(search_term) == 0)
+                if (strlen(search_term) != 0)
                 {
-                    set_color(COLOR_INDEX_DIM);
-                    set_color(COLOR_INDEX_FOREGROUND);
-                }
-                else
-                {
-                    set_color(COLOR_INDEX_FOREGROUND);
                     text = search_term;
                 }
 
-                draw_string(text, window_width / 2 - search_width / 2 + 4, 100 + 4, doc_scale);
+                draw_string(text, window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2 + get_dimension(DIM_TEXT_HORIZONTAL_MARGIN), top + text_vertical_offset);
 
                 /* draw search results */
                 for (int i = 0; i < results_shown_lines; i++)
@@ -1044,7 +1495,7 @@ void render(void)
                     if (real_index < matches_count)
                     {
                         draw_string(manpage_names[matches[real_index].idx],
-                                window_width / 2 - search_width / 2 + 4, 130 + i * search_height + 4, doc_scale);
+                                window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2 + get_dimension(DIM_TEXT_HORIZONTAL_MARGIN), top_result_box + i * search_height + text_vertical_offset);
                     }
                 }
 
@@ -1052,8 +1503,8 @@ void render(void)
                 {
                     set_color(COLOR_INDEX_BOLD);
                     int index_on_view = results_selected_index - results_view_offset;
-                    draw_rectangle_outline(window_width / 2 - search_width / 2, 130 + index_on_view * search_height,
-                            search_width, search_height);
+                    draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top_result_box + index_on_view * search_height,
+                            get_dimension(DIM_SEARCH_WIDTH), search_height);
                 }
 
                 {
@@ -1068,12 +1519,34 @@ void render(void)
                     }
 
                     set_color(COLOR_INDEX_DIM);
-                    draw_string(tmp, window_width / 2 - strlen(tmp) * character_width(doc_scale) / 2 + 4, 130 + 4 + results_shown_lines * search_height, doc_scale);
+                    draw_string(tmp, window_width / 2 - strlen(tmp) * get_character_width() / 2, top_result_box + results_shown_lines * search_height + text_vertical_offset);
                 }
             }
             break;
     }
 
+
+#if 0
+    if (loadedFont && (loadedFont->texture_id > 0))
+    {
+        set_color(COLOR_INDEX_FOREGROUND);
+        glBindTexture(GL_TEXTURE_2D, loadedFont->texture_id);
+
+        glEnable(GL_BLEND);
+        glEnable(GL_TEXTURE_2D);
+
+        int x =10;
+        int y= 10;
+        int w = loadedFont->bitmap_width;
+        int h = loadedFont->bitmap_height;
+        glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2f(x, y);
+        glTexCoord2f(0, 1); glVertex2f(x, y + h);
+        glTexCoord2f(1, 1); glVertex2f(x + w, y + h);
+        glTexCoord2f(1, 0); glVertex2f(x + w, y);
+        glEnd();
+    }
+#endif
 
     glutSwapBuffers();
 }
@@ -1092,7 +1565,7 @@ void set_scroll_position(int new_scroll_position)
 
 int scrollbar_thumb_hittest(int x, int y)
 {
-    if ((x > (window_width - scrollbar_width)) && (y >= scrollbar_thumb_position) && (y < scrollbar_thumb_position + scrollbar_thumb_size))
+    if ((x > (window_width - get_dimension(DIM_SCROLLBAR_WIDTH))) && (y >= scrollbar_thumb_position) && (y < scrollbar_thumb_position + scrollbar_thumb_size))
         return 1;
     else
         return 0;
@@ -1100,14 +1573,17 @@ int scrollbar_thumb_hittest(int x, int y)
 
 int results_hittest(int x, int y)
 {
-    int search_height = font_char_height * 3 / 2;
+    int search_height = get_line_height() * 3 / 2;
+
+    int top = 100;
+    int top_result_box = top + search_height + get_dimension(DIM_GUI_PADDING);
 
     for (int i = 0; i < results_shown_lines; i++)
     {
-        if ((x >= window_width / 2 - search_width / 2) &&
-                (x < window_width / 2 - search_width / 2 + search_width) &&
-                (y >= 130 + i * search_height) &&
-                (y < 130 + i * search_height + search_height))
+        if ((x >= window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2) &&
+                (x < window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2 + get_dimension(DIM_SEARCH_WIDTH)) &&
+                (y >= top_result_box + i * search_height) &&
+                (y < top_result_box + i * search_height + search_height))
         {
             return i;
         }
@@ -1125,10 +1601,10 @@ link_t *link_under_cursor(int x, int y)
     {
         recti r = p->links[i].document_rectangle;
 
-        r.x += document_margin;
-        r.x2 += document_margin;
-        r.y += document_margin - page->scroll_position;
-        r.y2 += document_margin - page->scroll_position;
+        r.x += get_dimension(DIM_DOCUMENT_MARGIN);
+        r.x2 += get_dimension(DIM_DOCUMENT_MARGIN);
+        r.y += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
+        r.y2 += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
 
         if (inside_recti(r, x, y))
         {
@@ -1158,16 +1634,16 @@ void mouse_func(int button, int state, int x, int y)
                             scrollbar_thumb_mouse_down_y = y;
                             scrollbar_thumb_mouse_down_thumb_position = scrollbar_thumb_position;
                         }
-                        else if (x >= (window_width - scrollbar_width))
+                        else if (x >= (window_width - get_dimension(DIM_SCROLLBAR_WIDTH)))
                         {
                             // page up or down if clicked outside the thumb
                             if (y < scrollbar_thumb_position)
                             {
-                                set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+                                set_scroll_position(page->scroll_position - (window_height - get_line_advance()));
                             }
                             else if (y >= (scrollbar_thumb_position + scrollbar_thumb_size))
                             {
-                                set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
+                                set_scroll_position(page->scroll_position + window_height - get_line_advance());
                             }
                         }
                         else
@@ -1210,13 +1686,13 @@ void mouse_func(int button, int state, int x, int y)
                 case 3:
                     if (state == GLUT_DOWN)
                     {
-                        set_scroll_position(page->scroll_position - scroll_amount);
+                        set_scroll_position(page->scroll_position - get_dimension(DIM_SCROLL_AMOUNT));
                     }
                     break;
                 case 4:
                     if (state == GLUT_DOWN)
                     {
-                        set_scroll_position(page->scroll_position + scroll_amount);
+                        set_scroll_position(page->scroll_position + get_dimension(DIM_SCROLL_AMOUNT));
                     }
                     break;
             }
@@ -1343,10 +1819,10 @@ void mouse_passive_motion_func(int x, int y)
                 {
                     recti r = p->links[i].document_rectangle;
 
-                    r.x += document_margin;
-                    r.x2 += document_margin;
-                    r.y += document_margin - page->scroll_position;
-                    r.y2 += document_margin - page->scroll_position;
+                    r.x += get_dimension(DIM_DOCUMENT_MARGIN);
+                    r.x2 += get_dimension(DIM_DOCUMENT_MARGIN);
+                    r.y += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
+                    r.y2 += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
 
                     if (inside_recti(r, x, y))
                     {
@@ -1434,18 +1910,16 @@ void keyboard_func(unsigned char key, int x, int y)
                 page_forward();
                 break;
             case 'i':
-                doc_scale *= 1.1;
-                glutReshapeWindow(fitting_window_width(doc_scale), window_height);
+                glutReshapeWindow(fitting_window_width(), window_height);
                 break;
             case 'o':
-                doc_scale *= 0.9;
-                glutReshapeWindow(fitting_window_width(doc_scale), window_height);
+                glutReshapeWindow(fitting_window_width(), window_height);
                 break;
             case 'k':
-                set_scroll_position(page->scroll_position - scroll_amount);
+                set_scroll_position(page->scroll_position - get_dimension(DIM_SCROLL_AMOUNT));
                 break;
             case 'j':
-                set_scroll_position(page->scroll_position + scroll_amount);
+                set_scroll_position(page->scroll_position + get_dimension(DIM_SCROLL_AMOUNT));
                 break;
             case 'G':
                 set_scroll_position(1000000000);
@@ -1455,9 +1929,9 @@ void keyboard_func(unsigned char key, int x, int y)
                     int mod = glutGetModifiers();
 
                     if (mod & GLUT_ACTIVE_SHIFT)
-                        set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+                        set_scroll_position(page->scroll_position - (window_height - get_line_advance()));
                     else
-                        set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
+                        set_scroll_position(page->scroll_position + window_height - get_line_advance());
                 }
                 break;
             default:
@@ -1523,16 +1997,16 @@ void special_func(int key, int x, int y)
             switch (key)
             {
                 case GLUT_KEY_UP:
-                    set_scroll_position(page->scroll_position - scroll_amount);
+                    set_scroll_position(page->scroll_position - get_dimension(DIM_SCROLL_AMOUNT));
                     break;
                 case GLUT_KEY_DOWN:
-                    set_scroll_position(page->scroll_position + scroll_amount);
+                    set_scroll_position(page->scroll_position + get_dimension(DIM_SCROLL_AMOUNT));
                     break;
                 case GLUT_KEY_PAGE_UP:
-                    set_scroll_position(page->scroll_position - (window_height - line_height(doc_scale)));
+                    set_scroll_position(page->scroll_position - (window_height - get_line_advance()));
                     break;
                 case GLUT_KEY_PAGE_DOWN:
-                    set_scroll_position(page->scroll_position + window_height - line_height(doc_scale));
+                    set_scroll_position(page->scroll_position + window_height - get_line_advance());
                     break;
                 case GLUT_KEY_HOME:
                     set_scroll_position(0);
@@ -1726,6 +2200,11 @@ int get_page_name_and_section(const char *pathname, char *name, char *section)
     return -1;
 }
 
+int cmp_str(const void *a, const void *b)
+{
+    return strcmp(*(char **)a, *(char **)b);
+}
+
 static int make_manpage_database(void)
 {
     const char * const sections[] = {"1", "8", "6", "2", "3", "5", "7", "4", "9", "3p"};
@@ -1820,6 +2299,8 @@ static int make_manpage_database(void)
 
         }
     }
+
+    qsort(manpage_names, sb_count(manpage_names), sizeof(char *), &cmp_str);
 
     return 0;
 }
@@ -1965,11 +2446,175 @@ void page_forward(void)
     }
 }
 
+int parse_line(char *line, char *name_out, char *value_out)
+{
+    /* eat beginning whitespace */
+    while ((*line && ((*line == ' ') || (*line == '\t'))))
+        line++;
+
+    if (*line == '\0')
+        return -1;
+
+    if (*line == '\n')
+        return -1; /* empty line */
+
+    if (*line == '#') /* comment */
+        return -2;
+
+    char *value = strchr(line, ':');
+    if (value == NULL)
+        return -3;
+
+    *value = 0;
+    value++;
+
+    char *space_pos = strchr(line, ' ');
+    if (space_pos != NULL)
+    {
+        *space_pos = 0;
+    }
+
+    while ((*value && ((*value == ' ') || (*value == '\t'))))
+        value++;
+
+    if (*value == '\0')
+        return -1;
+
+    if (*value == '\n')
+        return -1; /* empty line */
+
+    /* trim whitespace on the end of value */
+    char *end = value + strlen(value) - 1;
+
+    while (*end && ((*end == '\n') || (*end == ' ')))
+    {
+        *end = 0;
+        end--;
+    }
+
+    if (name_out)
+    {
+        strcpy(name_out, line);
+    }
+
+    if (value_out)
+    {
+        strcpy(value_out, value);
+    }
+
+    return 0;
+}
+
+void parse_color(const char *value, float *rgb)
+{
+    if (value[0] == '#')
+    {
+        uint32_t color_value = 0;
+        if (sscanf(value + 1, "%x", &color_value) == 1)
+        {
+            rgb[0] = (color_value >> 16) / 255.0f;
+            rgb[1] = ((color_value >> 8) & 0xff) / 255.0f;
+            rgb[2] = (color_value & 0xff) / 255.0f;
+        }
+    }
+}
+
+void load_settings(void)
+{
+    const char *rc_filename = ".manglrc";
+    char *home = getenv("HOME");
+
+    char settings_filename[256];
+    snprintf(settings_filename, sizeof(settings_filename), "%s/%s", home, rc_filename);
+
+    FILE *f = fopen(settings_filename, "rb");
+    if (f == NULL)
+    {
+        return;
+    }
+
+    char line[1024];
+
+    while (!feof(f))
+    {
+        line[0] = 0;
+        if (fgets(line, sizeof(line), f) != NULL)
+        {
+            char name[256];
+            char value[256];
+            if (parse_line(line, name, value) == 0)
+            {
+                if (strcmp(name, "font") == 0)
+                {
+                    strcpy(settings.font_file, value);
+                }
+                else if (strcmp(name, "font_size") == 0)
+                {
+                    settings.font_size = atoi(value);
+                }
+                else if (strcmp(name, "gui_scale") == 0)
+                {
+                    char *end = NULL;
+                    double val = strtod(value, &end);
+                    if ((end == NULL) || (end == value))
+                    {
+                        fprintf(stderr, "Failed to read value: \"%s\" from config file.\n", value);
+                    }
+                    else
+                    {
+                        settings.gui_scale = val;
+                    }
+                }
+                else if (strcmp(name, "line_spacing") == 0)
+                {
+                    char *end = NULL;
+                    double val = strtod(value, &end);
+                    if ((end == NULL) || (end == value))
+                    {
+                        fprintf(stderr, "Failed to read value: \"%s\" from config file.\n", value);
+                    }
+                    else
+                    {
+                        settings.line_spacing = val;
+                    }
+                }
+                else if (strcmp(name, "initial_window_rows") == 0)
+                {
+                    initial_window_rows = atoi(value);
+                }
+                else if (strcmp(name, "color_background") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_BACKGROUND]);
+                else if (strcmp(name, "color_foreground") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_FOREGROUND]);
+                else if (strcmp(name, "color_bold") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_BOLD]);
+                else if (strcmp(name, "color_italic") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_ITALIC]);
+                else if (strcmp(name, "color_dim") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_DIM]);
+                else if (strcmp(name, "color_link") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_LINK]);
+                else if (strcmp(name, "color_scrollbar_background") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_SCROLLBAR_BACKGROUND]);
+                else if (strcmp(name, "color_scrollbar_thumb") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_SCROLLBAR_THUMB]);
+                else if (strcmp(name, "color_scrollbar_thumb_hover") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_SCROLLBAR_THUMB_HOVER]);
+                else if (strcmp(name, "color_page_border") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_PAGE_BORDER]);
+            }
+        }
+    }
+
+    fclose(f);
+}
+
 int main(int argc, char *argv[])
 {
     char window_title[576];
     manpage_database = hashmap_new();
 
+    load_settings();
     make_manpage_database();
 
     if (argc < 2)
@@ -2037,6 +2682,21 @@ int main(int argc, char *argv[])
         }
     }
 
+    init_builtin_font();
+    init_freetype();
+    if (strlen(settings.font_file) > 0)
+    {
+        if (get_font_file(settings.font_file))
+        {
+            render_font_texture(settings.font_file, (int)(settings.gui_scale * settings.font_size));
+            mainFont = loadedFont;
+        }
+        else
+        {
+            fprintf(stderr, "Can't find or resolve font file/name: \"%s\"\n", settings.font_file);
+        }
+    }
+
     /* display gui */
     if (fork() != 0)
     {
@@ -2045,8 +2705,7 @@ int main(int argc, char *argv[])
 
     glutInit(&argc, argv);
     glutInitDisplayMode(0);
-    //glutInitDisplayMode(GLUT_DOUBLE);
-    glutInitWindowSize(fitting_window_width(doc_scale), 600);
+    glutInitWindowSize(fitting_window_width(), fitting_window_height(initial_window_rows));
 
     glutCreateWindow(window_title);
 
@@ -2059,7 +2718,7 @@ int main(int argc, char *argv[])
     glutKeyboardFunc(&keyboard_func);
     glutSpecialFunc(&special_func);
 
-    init_gl();
+    upload_font_textures();
 
     glutMainLoop();
 

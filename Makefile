@@ -1,5 +1,5 @@
-CFLAGS = -g -O2 -Wall
-LDFLAGS = -lm -lz -lGL -lglut
+CFLAGS = -g -O2 -Wall $(shell pkg-config --cflags freetype2)
+LDFLAGS = -lm -lz -lGL -lglut $(shell pkg-config --libs freetype2)
 
 LIBMAN_OBJS	 = mandoc/man.o \
 			   mandoc/man_macro.o \

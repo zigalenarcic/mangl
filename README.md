@@ -10,6 +10,7 @@ Features:
 * hyperlinks to other man pages
 * browsing history
 * colored text
+* truetype support
 * draggable scrollbar
 * keyboard and mouse interaction
 
