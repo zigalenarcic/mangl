@@ -16,11 +16,11 @@ Features:
 
 ## Building
 
-Install prerequisites if necessary (zlib, OpenGL and FreeGLUT headers and
+Install prerequisites if necessary (pkg-config, zlib, OpenGL, FreeGLUT and FreeType headers and
 libraries). On Debian systems run:
 
 ```
-sudo apt install libz-dev libgl-dev freeglut3-dev
+sudo apt install pkg-config libz-dev libgl-dev freeglut3-dev libfreetype6-dev
 ```
 
 First run `./configure` in mandoc folder:
