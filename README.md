@@ -1,6 +1,6 @@
 # mangl
 
-This is a graphical man page viewer based on mandoc (https://mandoc.bsd.lv/).
+Mangl is a graphical man page viewer based on the mandoc library (https://mandoc.bsd.lv/).
 
 ![Screenshot](screenshot/screenshot.png)
 
@@ -55,6 +55,32 @@ to copy the executable to `/usr/local/bin/` or copy and use the `mangl` binary a
 * to go to search screen: `Ctrl-f`
 * to quit: `q`, `Ctrl-c`, `Ctrl-d`
 
+## ~/.manglrc
+
+Configuration can be specified with `~/.manglrc` file. Here is an example
+(reproduces default settings):
+
+```
+font: Anonymous Pro
+font_size: 10
+gui_scale: 1
+line_spacing: 1
+initial_window_rows: 40
+color_background: #151515
+color_foreground: #E8E8D3
+color_bold: #8fbfdc
+color_italic: #ffb964
+color_dim: #656565
+color_scrollbar_background: #1c1c1c
+color_scrollbar_thumb: #454545
+color_scrollbar_thumb_hover: #545454
+color_link: #3300ff
+color_page_border: #ebb470
+```
+
+`font` uses `fc-match` to find the font file, it can also use font file name
+directly.
+
 ## Command line arguments
 
 ```
@@ -62,4 +88,8 @@ mangl     - open the viewer in search mode
 mangl [man page name] - open the viewer in man page mode with man page opened
 mangl [section name] [man page name] - open the man page from the specified section, e.g. mangl 3 printf
 ```
+
+## License
+
+Mangl is licesend under the BSD 2-clause license.
 
