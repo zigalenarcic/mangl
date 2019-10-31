@@ -2446,6 +2446,11 @@ void page_back(void)
         update_scrollbar();
         glutPostRedisplay();
     }
+    else if (display_mode == D_MANPAGE)
+    {
+        display_mode = D_SEARCH;
+        glutPostRedisplay();
+    }
 }
 
 void page_forward(void)
