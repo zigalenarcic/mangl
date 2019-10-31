@@ -67,14 +67,14 @@ gui_scale: 1
 line_spacing: 1
 initial_window_rows: 40
 color_background: #151515
-color_foreground: #e8e8d3
-color_bold: #8fbfdc
-color_italic: #ffb964
-color_dim: #656565
-color_scrollbar_background: #1c1c1c
+color_foreground: #fdfde8
+color_bold: #a4d4f1
+color_italic: #ffce79
+color_dim: #7b7b7b
+color_scrollbar_background: #262626
 color_scrollbar_thumb: #454545
 color_scrollbar_thumb_hover: #545454
-color_link: #3300ff
+color_link: #4515ff
 color_page_border: #ebb470
 ```
 
