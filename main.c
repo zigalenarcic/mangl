@@ -1053,6 +1053,7 @@ float color_table[][3] = {
     {84.0f/255.0f, 84.0f/255.0f, 84.0f/255.0f},
     {72.0f/255.0f, 21.0f/255.0f, 255.0f/255.0f},
     {235.0f/255.0f, 180.0f/255.0f, 112.0f/255.0f},
+    {143.0f/255.0f, 191.0f/255.0f, 220.0f/255.0f},
 };
 
 enum {
@@ -1065,7 +1066,8 @@ enum {
     COLOR_INDEX_SCROLLBAR_THUMB,
     COLOR_INDEX_SCROLLBAR_THUMB_HOVER,
     COLOR_INDEX_LINK,
-    COLOR_INDEX_PAGE_BORDER,
+    COLOR_INDEX_GUI_1, /* amber */
+    COLOR_INDEX_GUI_2, /* blue */
 };
 
 void set_color(int i)
@@ -1410,7 +1412,7 @@ void render(void)
             {
                 /* draw document border */
                 int border_margin = get_dimension(DIM_DOCUMENT_MARGIN) * 3 / 8 + 1;
-                set_color(COLOR_INDEX_PAGE_BORDER);
+                set_color(COLOR_INDEX_GUI_1);
                 draw_rectangle_outline(border_margin, border_margin - page->scroll_position,
                         document_width() - 2 * border_margin, document_height() - 2 * border_margin);
 
@@ -1464,7 +1466,7 @@ void render(void)
         case D_SEARCH:
         default:
             {
-                set_color(COLOR_INDEX_PAGE_BORDER);
+                set_color(COLOR_INDEX_GUI_1);
                 int search_height = get_line_height() * 3 / 2;
 
                 int top = 100;
@@ -1501,7 +1503,7 @@ void render(void)
 
                 if ((results_selected_index >= 0) && (results_selected_index < matches_count))
                 {
-                    set_color(COLOR_INDEX_BOLD);
+                    set_color(COLOR_INDEX_GUI_2);
                     int index_on_view = results_selected_index - results_view_offset;
                     draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top_result_box + index_on_view * search_height,
                             get_dimension(DIM_SEARCH_WIDTH), search_height);
@@ -2375,18 +2377,29 @@ struct manpage *load_manpage(const char *filename)
 
 void update_window_title()
 {
-    char window_title[576];
-
-    if (strlen(page->manpage_name) > 0)
+    switch (display_mode)
     {
-        sprintf(window_title, "%s(%s) - mangl", page->manpage_name, page->manpage_section);
-    }
-    else
-    {
-        sprintf(window_title, "%s - mangl", page->filename);
-    }
+        case D_MANPAGE:
+            {
+                char window_title[576];
 
-    glutSetWindowTitle(window_title);
+                if (strlen(page->manpage_name) > 0)
+                {
+                    sprintf(window_title, "%s(%s) - mangl",
+                            page->manpage_name, page->manpage_section);
+                }
+                else
+                {
+                    sprintf(window_title, "%s - mangl", page->filename);
+                }
+                glutSetWindowTitle(window_title);
+            }
+            break;
+        case D_SEARCH:
+        default:
+            glutSetWindowTitle("mangl");
+            break;
+    }
 }
 
 void open_new_page(const char *filename)
@@ -2601,8 +2614,10 @@ void load_settings(void)
                     parse_color(value, color_table[COLOR_INDEX_SCROLLBAR_THUMB]);
                 else if (strcmp(name, "color_scrollbar_thumb_hover") == 0)
                     parse_color(value, color_table[COLOR_INDEX_SCROLLBAR_THUMB_HOVER]);
-                else if (strcmp(name, "color_page_border") == 0)
-                    parse_color(value, color_table[COLOR_INDEX_PAGE_BORDER]);
+                else if (strcmp(name, "color_gui_1") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_GUI_1]);
+                else if (strcmp(name, "color_gui_2") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_GUI_2]);
             }
         }
     }

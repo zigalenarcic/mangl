@@ -75,7 +75,8 @@ color_scrollbar_background: #262626
 color_scrollbar_thumb: #454545
 color_scrollbar_thumb_hover: #545454
 color_link: #4515ff
-color_page_border: #ebb470
+color_gui_1: #ebb470
+color_gui_2: #8fbfdc
 ```
 
 `font` parameter uses the `fc-match` external program to find the font file. The font
