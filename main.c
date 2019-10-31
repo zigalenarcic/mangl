@@ -1432,7 +1432,7 @@ void render(void)
                             {
                                 set_color(COLOR_INDEX_LINK);
                                 int link_border = 1;
-                                draw_rectangle_outline(r.x - link_border, r.y - link_border,
+                                draw_rectangle(r.x - link_border, r.y - link_border,
                                         r.x2 - r.x + 2 * link_border, r.y2 - r.y + 2 * link_border);
                             }
                         }
