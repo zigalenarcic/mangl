@@ -50,8 +50,8 @@ to copy the executable to `/usr/local/bin/` or copy and use the `mangl` binary a
 * scrolling one step: `j`, `k`, `up-arrow`, `down-arrow`
 * scrolling one whole page: `space`, `shift-space`, `page-up`, `page-down`
 * scrolling to the beginning or the end of the man page: `gg`, `G`, `Home`, `End`
-* to go to the previous man page: `b` or `right-mouse-click`
-* to go to the next man page: `left-mouse-click` on the link or `f` to go to the page opened before going back
+* to go to the previous man page: `b`, `escape`, `right-mouse-click`
+* to go to the next man page: `left-mouse-click` on the link, `f` to go to the page opened before going back
 * to go to search screen: `Ctrl-f`
 * to quit: `q`, `Ctrl-c`, `Ctrl-d`
 

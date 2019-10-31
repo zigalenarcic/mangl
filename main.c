@@ -1900,6 +1900,7 @@ void keyboard_func(unsigned char key, int x, int y)
             case 'Q':
                 exit(EXIT_SUCCESS);
             case 'b':
+            case 27: /* escape */
                 page_back();
                 break;
             case 6: /* ctrl-f */
