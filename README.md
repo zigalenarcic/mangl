@@ -54,6 +54,7 @@ to copy the executable to `/usr/local/bin/` or copy and use the `mangl` binary a
 * scrolling to the beginning or the end of the man page: `gg`, `G`, `Home`, `End`
 * to go to the previous man page: `b`, `escape`, `right-mouse-click`
 * to go to the next man page: `left-mouse-click` on the link, `f` to go to the page opened before going back
+* to search within a man page: `/` to initiate a search, `escape` to cancel a search, `enter` to commit the search, `n` and `N` to move between search results, search emulates vim's `smartcase` feature (use case sensitive search if the term includes uppercase letters)
 * to go to search screen: `Ctrl-f`
 * to quit: `q`, `Ctrl-c`, `Ctrl-d`
 
