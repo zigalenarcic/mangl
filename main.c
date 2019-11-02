@@ -1087,7 +1087,9 @@ void draw_rectangle(int x, int y, int w, int h)
 
 void draw_rectangle_outline(int x, int y, int w, int h)
 {
-    glTranslatef(-0.5, -0.5, 0); /* fix missing pixel in the corner */
+    glTranslatef(0.5, 0.5, 0); /* fix missing pixel in the corner */
+    w -= 1; /* to match normal quads */
+    h -= 1;
     glBegin(GL_LINE_STRIP);
     glVertex2i(x, y);
     glVertex2i(x + w, y);
@@ -1095,7 +1097,7 @@ void draw_rectangle_outline(int x, int y, int w, int h)
     glVertex2i(x, y + h);
     glVertex2i(x, y);
     glEnd();
-    glTranslatef(0.5, 0.5, 0);
+    glTranslatef(-0.5, -0.5, 0);
 }
 
 /*
