@@ -2753,6 +2753,7 @@ void page_back(void)
     else if (display_mode == D_MANPAGE)
     {
         display_mode = D_SEARCH;
+        stack_pos = 0;
         glutPostRedisplay();
     }
 }
