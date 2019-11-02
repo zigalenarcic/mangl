@@ -1079,7 +1079,7 @@ void update_page_search(struct manpage *p)
                     s->document_rectangle.x2 = s->document_rectangle.x + strlen(p->search_string) * get_character_width();
                     s->document_rectangle.y2 = s->document_rectangle.y + get_line_height();
 
-                    if ((s->document_rectangle.y + get_dimension(DIM_DOCUMENT_MARGIN)) >= p->scroll_position)
+                    if ((s->document_rectangle.y + get_dimension(DIM_DOCUMENT_MARGIN)) >= p->search_start_scroll_position)
                     {
                         if (search_index_set == 0)
                             p->search_index = p->search_num;
@@ -1090,6 +1090,8 @@ void update_page_search(struct manpage *p)
 
                     if (p->search_num >= ARRAY_SIZE(p->searches))
                     {
+                        if (search_index_set == 0)
+                            p->search_index = 0;
                         return;
                     }
 
@@ -1103,6 +1105,8 @@ void update_page_search(struct manpage *p)
 
             if (p->search_num >= ARRAY_SIZE(p->searches))
             {
+                if (search_index_set == 0)
+                    p->search_index = 0;
                 return;
             }
         }
@@ -1762,19 +1766,21 @@ recti to_document_coordinates(recti r)
     return r;
 }
 
-void scroll_in_view(recti r)
+void scroll_in_view(recti r, int prefered_scroll_position)
 {
     int scroll_offset = 3 * get_line_advance();
 
-    if ((r.y - scroll_offset) < page->scroll_position)
+    if ((r.y - scroll_offset) < prefered_scroll_position)
     {
         page->scroll_position = clamp_scroll_position(r.y - scroll_offset);
-        return;
     }
-
-    if ((r.y2 + scroll_offset) > (page->scroll_position + window_height))
+    else if ((r.y2 + scroll_offset) > (prefered_scroll_position + window_height))
     {
         page->scroll_position = clamp_scroll_position(r.y2 - window_height + scroll_offset);
+    }
+    else
+    {
+        page->scroll_position = prefered_scroll_position;
     }
 }
 
@@ -2114,7 +2120,7 @@ void keyboard_func(unsigned char key, int x, int y)
                             update_page_search(page);
                             if (page->search_num > 0)
                             {
-                                scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+                                scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle), page->search_start_scroll_position);
                             }
                             glutPostRedisplay();
                         }
@@ -2127,7 +2133,7 @@ void keyboard_func(unsigned char key, int x, int y)
                         update_page_search(page);
                         if (page->search_num > 0)
                         {
-                            scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+                            scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle), page->search_start_scroll_position);
                         }
                         glutPostRedisplay();
                     }
@@ -2196,7 +2202,7 @@ void keyboard_func(unsigned char key, int x, int y)
                     if (page->search_index >= page->search_num)
                         page->search_index -= page->search_num;
 
-                    scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+                    scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle), page->scroll_position);
 
                     glutPostRedisplay();
                 }
@@ -2208,7 +2214,7 @@ void keyboard_func(unsigned char key, int x, int y)
                     if (page->search_index < 0)
                         page->search_index += page->search_num;
 
-                    scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+                    scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle), page->scroll_position);
 
                     glutPostRedisplay();
                 }
