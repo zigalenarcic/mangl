@@ -7,7 +7,9 @@ Mangl is a graphical man page viewer based on the mandoc library (https://mandoc
 It uses OpenGL to display man pages with clickable hyperlinks and smooth scrolling.
 
 Features:
+* searching of man pages
 * hyperlinks to other man pages
+* search withing a man page
 * browsing history
 * colored text
 * truetype support
@@ -77,6 +79,7 @@ color_scrollbar_thumb_hover: #545454
 color_link: #4515ff
 color_gui_1: #ebb470
 color_gui_2: #8fbfdc
+color_error: #ff1515
 ```
 
 `font` parameter uses the `fc-match` external program to find the font file. The font

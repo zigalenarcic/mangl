@@ -94,6 +94,10 @@ typedef struct {
     char link[256];
 } link_t;
 
+typedef struct {
+    recti document_rectangle;
+} search_t;
+
 typedef struct CharDescription_
 {
     int available;
@@ -531,6 +535,15 @@ struct manpage
     int scroll_position;
 
     link_t *links;
+
+    int search_start_scroll_position;
+    int search_input_active;
+    char search_string[256];
+    int search_visible;
+
+    search_t searches[100];
+    int search_num;
+    int search_index;
 };
 
 struct manpage *page;
@@ -982,6 +995,122 @@ void find_links(struct manpage *p)
     }
 }
 
+bool contains_uppercase(const char *str)
+{
+    while (*str)
+    {
+        if ((*str >= 'A') && (*str <= 'Z'))
+            return true;
+
+        str++;
+    }
+
+    return false;
+}
+
+void update_page_search(struct manpage *p)
+{
+    p->search_num = 0;
+    p->search_index = 0;
+    int search_index_set = 0;
+
+    if (strlen(p->search_string) == 0)
+        return;
+
+    int search_len = strlen(p->search_string);
+
+    int ignore_case = 1;
+
+    if (contains_uppercase(p->search_string))
+    {
+        ignore_case = 0;
+    }
+
+    int vertical_position = 0;
+
+    for (int i = 0; i < p->document.n_lines; i++)
+    {
+        struct span *s = p->document.lines[i];
+
+        char line[2048];
+        int pos = 0;
+        line[0] = 0;
+
+        while (s)
+        {
+            if (s->length > 0)
+            {
+                char *in = s->buffer;
+
+                while (*in && (pos < (ARRAY_SIZE(line) - 1)))
+                {
+                    if (*in == '\b')
+                    {
+                        if (pos > 0) pos--;
+                    }
+                    else
+                    {
+                        line[pos++] = *in;
+                    }
+
+                    in++;
+                }
+
+            }
+            s = s->next;
+        }
+
+        line[pos] = 0;
+
+        {
+            /* search the current line */
+            char *str = line;
+
+            while (*str)
+            {
+                if ((ignore_case && (strncasecmp(str, p->search_string, search_len) == 0)) ||
+                        (strncmp(str, p->search_string, search_len) == 0))
+                {
+                    /* we have a match */
+                    search_t *s = &p->searches[p->search_num];
+
+                    s->document_rectangle.x = ((intptr_t)str - (intptr_t)line) * get_character_width();
+                    s->document_rectangle.y = i * get_line_advance();
+                    s->document_rectangle.x2 = s->document_rectangle.x + strlen(p->search_string) * get_character_width();
+                    s->document_rectangle.y2 = s->document_rectangle.y + get_line_height();
+
+                    if ((s->document_rectangle.y + get_dimension(DIM_DOCUMENT_MARGIN)) >= p->scroll_position)
+                    {
+                        if (search_index_set == 0)
+                            p->search_index = p->search_num;
+                        search_index_set = 1;
+                    }
+
+                    p->search_num++;
+
+                    if (p->search_num >= ARRAY_SIZE(p->searches))
+                    {
+                        return;
+                    }
+
+                    str += strlen(p->search_string);
+                }
+                else
+                {
+                    str++;
+                }
+            }
+
+            if (p->search_num >= ARRAY_SIZE(p->searches))
+            {
+                return;
+            }
+        }
+
+        vertical_position += get_line_advance();
+    }
+}
+
 void update_scrollbar(void)
 {
     if (display_mode == D_SEARCH)
@@ -1054,6 +1183,9 @@ float color_table[][3] = {
     {72.0f/255.0f, 21.0f/255.0f, 255.0f/255.0f},
     {235.0f/255.0f, 180.0f/255.0f, 112.0f/255.0f},
     {143.0f/255.0f, 191.0f/255.0f, 220.0f/255.0f},
+    {255.0f/255.0f, 21.0f/255.0f, 21.0f/255.0f},
+    {21.0f/255.0f, 21.0f/255.0f, 180.0f/255.0f},
+    {21.0f/255.0f, 200.0f/255.0f, 21.0f/255.0f},
 };
 
 enum {
@@ -1068,6 +1200,9 @@ enum {
     COLOR_INDEX_LINK,
     COLOR_INDEX_GUI_1, /* amber */
     COLOR_INDEX_GUI_2, /* blue */
+    COLOR_INDEX_ERROR, /* red-like */
+    COLOR_INDEX_SEARCHES,
+    COLOR_INDEX_SEARCH_SELECTED,
 };
 
 void set_color(int i)
@@ -1418,6 +1553,28 @@ void render(void)
                 draw_rectangle_outline(border_margin, border_margin - page->scroll_position,
                         document_width() - 2 * border_margin, document_height() - 2 * border_margin);
 
+                /* draw page search matches */
+                if (page->search_visible)
+                {
+                    for (int i = 0; i < page->search_num; i++)
+                    {
+                        recti r = page->searches[i].document_rectangle;
+
+                        r.x += get_dimension(DIM_DOCUMENT_MARGIN);
+                        r.x2 += get_dimension(DIM_DOCUMENT_MARGIN);
+                        r.y += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
+                        r.y2 += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
+
+                        if ((r.y2 >= 0) || (r.y < window_height))
+                        {
+                            set_color((i == page->search_index) ? COLOR_INDEX_SEARCH_SELECTED : COLOR_INDEX_SEARCHES);
+                            int border = 1;
+                            draw_rectangle(r.x - border, r.y - border,
+                                    r.x2 - r.x + 2 * border, r.y2 - r.y + 2 * border);
+                        }
+                    }
+                }
+
                 /* draw link hovering */
                 {
                     int link_number = sb_count(page->links);
@@ -1445,6 +1602,28 @@ void render(void)
 
                 render_manpage(page);
 
+                /* draw the search input if active */
+                if (page->search_input_active)
+                {
+                    int input_height = get_line_height() * 3 / 2;
+                    int input_width = get_character_width() * 30;
+                    set_color(COLOR_INDEX_BACKGROUND);
+                    draw_rectangle(0, window_height - input_height, input_width, input_height);
+                    set_color(COLOR_INDEX_GUI_1);
+                    draw_rectangle_outline(-1, window_height - input_height, input_width + 1, input_height + 1); /* shift it so left and bottom line disappear */
+
+                    if (strlen(page->search_string) == 0)
+                    {
+                        set_color(COLOR_INDEX_DIM);
+                        draw_string("Search", get_dimension(DIM_TEXT_HORIZONTAL_MARGIN), window_height - input_height + get_dimension(DIM_TEXT_HORIZONTAL_MARGIN));
+                    }
+                    else
+                    {
+                        set_color((page->search_num > 0) ? COLOR_INDEX_FOREGROUND : COLOR_INDEX_ERROR);
+                        draw_string(page->search_string, get_dimension(DIM_TEXT_HORIZONTAL_MARGIN), window_height - input_height + get_dimension(DIM_TEXT_HORIZONTAL_MARGIN));
+                    }
+                }
+
                 /* draw the scrollbar */
                 set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
                 draw_rectangle(window_width - get_dimension(DIM_SCROLLBAR_WIDTH), 0, get_dimension(DIM_SCROLLBAR_WIDTH), window_height);
@@ -1469,18 +1648,18 @@ void render(void)
         default:
             {
                 set_color(COLOR_INDEX_GUI_1);
-                int search_height = get_line_height() * 3 / 2;
+                int input_height = get_line_height() * 3 / 2;
 
                 int top = 100;
-                int top_result_box = top + search_height + get_dimension(DIM_GUI_PADDING);
-                int text_vertical_offset = ceil(0.5 * (search_height - get_line_height()));
+                int top_result_box = top + input_height + get_dimension(DIM_GUI_PADDING);
+                int text_vertical_offset = ceil(0.5 * (input_height - get_line_height()));
 
                 draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top,
-                        get_dimension(DIM_SEARCH_WIDTH), search_height);
+                        get_dimension(DIM_SEARCH_WIDTH), input_height);
 
                 set_color(COLOR_INDEX_SCROLLBAR_BACKGROUND);
                 draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top_result_box,
-                        get_dimension(DIM_SEARCH_WIDTH), results_shown_lines * search_height);
+                        get_dimension(DIM_SEARCH_WIDTH), results_shown_lines * input_height);
 
                 set_color(COLOR_INDEX_FOREGROUND);
                 const char *text = "Type to search...";
@@ -1499,7 +1678,7 @@ void render(void)
                     if (real_index < matches_count)
                     {
                         draw_string(manpage_names[matches[real_index].idx],
-                                window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2 + get_dimension(DIM_TEXT_HORIZONTAL_MARGIN), top_result_box + i * search_height + text_vertical_offset);
+                                window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2 + get_dimension(DIM_TEXT_HORIZONTAL_MARGIN), top_result_box + i * input_height + text_vertical_offset);
                     }
                 }
 
@@ -1507,8 +1686,8 @@ void render(void)
                 {
                     set_color(COLOR_INDEX_GUI_2);
                     int index_on_view = results_selected_index - results_view_offset;
-                    draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top_result_box + index_on_view * search_height,
-                            get_dimension(DIM_SEARCH_WIDTH), search_height);
+                    draw_rectangle_outline(window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2, top_result_box + index_on_view * input_height,
+                            get_dimension(DIM_SEARCH_WIDTH), input_height);
                 }
 
                 {
@@ -1523,7 +1702,7 @@ void render(void)
                     }
 
                     set_color(COLOR_INDEX_DIM);
-                    draw_string(tmp, window_width / 2 - strlen(tmp) * get_character_width() / 2, top_result_box + results_shown_lines * search_height + text_vertical_offset);
+                    draw_string(tmp, window_width / 2 - strlen(tmp) * get_character_width() / 2, top_result_box + results_shown_lines * input_height + text_vertical_offset);
                 }
             }
             break;
@@ -1555,15 +1734,47 @@ void render(void)
     glutSwapBuffers();
 }
 
-void set_scroll_position(int new_scroll_position)
+int clamp_scroll_position(int new_scroll_position)
 {
     int doc_height = document_height();
-    new_scroll_position = clamp(new_scroll_position, 0, (doc_height - window_height) > 0 ? doc_height - window_height : 0);
+    return clamp(new_scroll_position, 0, (doc_height - window_height) > 0 ? doc_height - window_height : 0);
+}
+
+void set_scroll_position(int new_scroll_position)
+{
+    new_scroll_position = clamp_scroll_position(new_scroll_position);
 
     if (new_scroll_position != page->scroll_position)
     {
         page->scroll_position = new_scroll_position;
         glutPostRedisplay();
+    }
+}
+
+recti to_document_coordinates(recti r)
+{
+    r.x += get_dimension(DIM_DOCUMENT_MARGIN);
+    r.x2 += get_dimension(DIM_DOCUMENT_MARGIN);
+
+    r.y += get_dimension(DIM_DOCUMENT_MARGIN);
+    r.y2 += get_dimension(DIM_DOCUMENT_MARGIN);
+
+    return r;
+}
+
+void scroll_in_view(recti r)
+{
+    int scroll_offset = 3 * get_line_advance();
+
+    if ((r.y - scroll_offset) < page->scroll_position)
+    {
+        page->scroll_position = clamp_scroll_position(r.y - scroll_offset);
+        return;
+    }
+
+    if ((r.y2 + scroll_offset) > (page->scroll_position + window_height))
+    {
+        page->scroll_position = clamp_scroll_position(r.y2 - window_height + scroll_offset);
     }
 }
 
@@ -1577,17 +1788,17 @@ int scrollbar_thumb_hittest(int x, int y)
 
 int results_hittest(int x, int y)
 {
-    int search_height = get_line_height() * 3 / 2;
+    int input_height = get_line_height() * 3 / 2;
 
     int top = 100;
-    int top_result_box = top + search_height + get_dimension(DIM_GUI_PADDING);
+    int top_result_box = top + input_height + get_dimension(DIM_GUI_PADDING);
 
     for (int i = 0; i < results_shown_lines; i++)
     {
         if ((x >= window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2) &&
                 (x < window_width / 2 - get_dimension(DIM_SEARCH_WIDTH) / 2 + get_dimension(DIM_SEARCH_WIDTH)) &&
-                (y >= top_result_box + i * search_height) &&
-                (y < top_result_box + i * search_height + search_height))
+                (y >= top_result_box + i * input_height) &&
+                (y < top_result_box + i * input_height + input_height))
         {
             return i;
         }
@@ -1877,6 +2088,55 @@ void keyboard_func(unsigned char key, int x, int y)
 
     if (display_mode == D_MANPAGE)
     {
+        if (page->search_input_active)
+        {
+            switch (key)
+            {
+                case 3: /* ctrl-c */
+                case 4: /* ctrl-d */
+                case 27: /* escape */
+                    page->search_input_active = 0;
+                    set_scroll_position(page->search_start_scroll_position);
+                    glutPostRedisplay();
+                    break;
+                case '\n':
+                case '\r':
+                    /* save the search */
+                    page->search_input_active = 0;
+                    glutPostRedisplay();
+                    break;
+                case '\b':
+                    {
+                        int len = strlen(page->search_string);
+                        if (len > 0)
+                        {
+                            page->search_string[len - 1] = 0;
+                            update_page_search(page);
+                            if (page->search_num > 0)
+                            {
+                                scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+                            }
+                            glutPostRedisplay();
+                        }
+                    }
+                    break;
+                default:
+                    if (strlen(page->search_string) <= (ARRAY_SIZE(page->search_string) - 2))
+                    {
+                        strcat(page->search_string, (char[]){key, 0});
+                        update_page_search(page);
+                        if (page->search_num > 0)
+                        {
+                            scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+                        }
+                        glutPostRedisplay();
+                    }
+                    break;
+            }
+
+            return;
+        }
+
         if (key == 'g')
         {
             if (g_pending)
@@ -1910,6 +2170,48 @@ void keyboard_func(unsigned char key, int x, int y)
             case 6: /* ctrl-f */
                 display_mode = D_SEARCH;
                 glutPostRedisplay();
+                break;
+            case '/':
+                page->search_string[0] = 0;
+                page->search_num = 0;
+                page->search_index = 0;
+                page->search_start_scroll_position = page->scroll_position;
+                page->search_visible = 1;
+                page->search_input_active = 1;
+                glutPostRedisplay();
+                break;
+            case '\n':
+            case '\r':
+                /* clear search */
+                page->search_num = 0;
+                page->search_index = 0;
+                page->search_string[0] = 0;
+                page->search_visible = 0;
+                glutPostRedisplay();
+                break;
+            case 'n':
+                if (page->search_visible)
+                {
+                    page->search_index++;
+                    if (page->search_index >= page->search_num)
+                        page->search_index -= page->search_num;
+
+                    scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+
+                    glutPostRedisplay();
+                }
+                break;
+            case 'N':
+                if (page->search_visible)
+                {
+                    page->search_index--;
+                    if (page->search_index < 0)
+                        page->search_index += page->search_num;
+
+                    scroll_in_view(to_document_coordinates(page->searches[page->search_index].document_rectangle));
+
+                    glutPostRedisplay();
+                }
                 break;
             case 'f':
                 page_forward();
@@ -2625,6 +2927,8 @@ void load_settings(void)
                     parse_color(value, color_table[COLOR_INDEX_GUI_1]);
                 else if (strcmp(name, "color_gui_2") == 0)
                     parse_color(value, color_table[COLOR_INDEX_GUI_2]);
+                else if (strcmp(name, "color_error") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_ERROR]);
             }
         }
     }
