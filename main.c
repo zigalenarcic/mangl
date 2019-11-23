@@ -1191,8 +1191,8 @@ float color_table[][3] = {
     {235.0f/255.0f, 180.0f/255.0f, 112.0f/255.0f},
     {143.0f/255.0f, 191.0f/255.0f, 220.0f/255.0f},
     {255.0f/255.0f, 21.0f/255.0f, 21.0f/255.0f},
-    {21.0f/255.0f, 21.0f/255.0f, 180.0f/255.0f},
-    {21.0f/255.0f, 200.0f/255.0f, 21.0f/255.0f},
+    {21.0f/255.0f, 21.0f/255.0f, 255.0f/255.0f},
+    {21.0f/255.0f, 255.0f/255.0f, 21.0f/255.0f},
 };
 
 enum {
@@ -2945,6 +2945,10 @@ void load_settings(void)
                     parse_color(value, color_table[COLOR_INDEX_GUI_2]);
                 else if (strcmp(name, "color_error") == 0)
                     parse_color(value, color_table[COLOR_INDEX_ERROR]);
+                else if (strcmp(name, "color_searches") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_SEARCHES]);
+                else if (strcmp(name, "color_search_selected") == 0)
+                    parse_color(value, color_table[COLOR_INDEX_SEARCH_SELECTED]);
             }
         }
     }

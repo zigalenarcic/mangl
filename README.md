@@ -81,6 +81,8 @@ color_link: #4515ff
 color_gui_1: #ebb470
 color_gui_2: #8fbfdc
 color_error: #ff1515
+color_searches: #1515ff
+color_search_selected: #15ff15
 ```
 
 `font` parameter uses the `fc-match` external program to find the font file. The font
