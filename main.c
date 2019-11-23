@@ -2234,6 +2234,12 @@ void keyboard_func(unsigned char key, int x, int y)
             case 'j':
                 set_scroll_position(page->scroll_position + get_dimension(DIM_SCROLL_AMOUNT));
                 break;
+            case 'K':
+                set_scroll_position(page->scroll_position - 5 * get_dimension(DIM_SCROLL_AMOUNT));
+                break;
+            case 'J':
+                set_scroll_position(page->scroll_position + 5 * get_dimension(DIM_SCROLL_AMOUNT));
+                break;
             case 'G':
                 set_scroll_position(1000000000);
                 break;
