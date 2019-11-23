@@ -1617,7 +1617,7 @@ void render(void)
                     set_color(COLOR_INDEX_BACKGROUND);
                     draw_rectangle(0, window_height - input_height, input_width, input_height);
                     set_color(COLOR_INDEX_GUI_1);
-                    draw_rectangle_outline(-1, window_height - input_height, input_width + 1, input_height + 1); /* shift it so left and bottom line disappear */
+                    draw_rectangle_outline(0, window_height - input_height, input_width, input_height);
 
                     if (strlen(page->search_string) == 0)
                     {
