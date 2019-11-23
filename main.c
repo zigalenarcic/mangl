@@ -41,6 +41,9 @@
 #include "mandoc/mandoc_aux.h"
 #include "mandoc/term.h"
 
+#define MANGL_VERSION_MAJOR 1
+#define MANGL_VERSION_MINOR 0
+
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define ZMALLOC(type, n) ((type *)calloc(n, sizeof(type)))
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
@@ -2967,7 +2970,12 @@ int main(int argc, char *argv[])
         const char *filename = NULL;
         char tmp_filename[1024];
 
-        if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0))
+        if (strcmp(argv[1], "--version") == 0)
+        {
+            printf("mangl %d.%d\n", MANGL_VERSION_MAJOR, MANGL_VERSION_MINOR);
+            exit(EXIT_SUCCESS);
+        }
+        else if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0))
         {
             print_usage(argv[0]);
             exit(EXIT_SUCCESS);
