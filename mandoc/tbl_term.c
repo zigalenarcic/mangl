@@ -798,7 +798,7 @@ tbl_fill_char(struct termp *tp, char c, size_t len)
 static void
 tbl_fill_border(struct termp *tp, int c, size_t len)
 {
-	char	 buf[12];
+	char	 buf[13];
 
 	if ((c = borders_locale[c]) > 127) {
 		(void)snprintf(buf, sizeof(buf), "\\[u%04x]", c);
