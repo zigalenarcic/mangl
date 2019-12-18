@@ -597,56 +597,53 @@ struct span* get_last_span(struct manpage *p)
 void add_to_span(struct span *s, int letter)
 {
 #define STARTING_SPAN_SIZE 32
-	char letter_2 = 0;
+    char letter_2 = 0;
 
-	switch(letter)
-	{
-		case 0x2010: /* Hyphen */
-		case 0x2013: /* En dash */
-		case 0x2014: /* Em dash */
-		case 0x2022: /* Bullet */
-		case 0x2212: /* Minus sign */
-		case 0x2500: /* Box drawings light horizontal */
-		case 0x2501: /* Box drawings heavy horizontal */
-			letter = '-';
-			break;
-		case 0x2502: /* Box drawings light vertical */
-		case 0x2503: /* Box drawings heavy vertical */
-			letter = '|';
-			break;
-		case 0x2002: /* En space */
-			letter = ' ';
-			break;
-		case 0x2265: /* Greater than or equal */
-			{
-				letter = '>';
-				letter_2 = '=';
-			}
-			break;
-		case 0x2264: /* Less than or equal */
-			{
-				letter = '<';
-				letter_2 = '=';
-			}
-			break;
-		case 160: /* Non-breaking space */
-			letter = ' ';
+    switch (letter)
+    {
+        case 0x2010: /* Hyphen */
+        case 0x2013: /* En dash */
+        case 0x2014: /* Em dash */
+        case 0x2022: /* Bullet */
+        case 0x2212: /* Minus sign */
+        case 0x2500: /* Box drawings light horizontal */
+        case 0x2501: /* Box drawings heavy horizontal */
+            letter = '-';
+            break;
+        case 0x2502: /* Box drawings light vertical */
+        case 0x2503: /* Box drawings heavy vertical */
+            letter = '|';
+            break;
+        case 0x2265: /* Greater than or equal */
+            {
+                letter = '>';
+                letter_2 = '=';
+            }
+            break;
+        case 0x2264: /* Less than or equal */
+            {
+                letter = '<';
+                letter_2 = '=';
+            }
+            break;
+        case 160: /* Non-breaking space */
+        case 0x2002: /* En space */
+            letter = ' ';
+            break;
+        case 0x201c:
+        case 0x201d: /* Left and right double quotation mark */
+            letter = '"';
+            break;
+        case 0x2018:
+        case 0x2019: /* Left and right single quotation mark */
+            letter = '\'';
+            break;
+    }
 
-			break;
-		case 0x201c:
-		case 0x201d: /* Left and right double quotation mark */
-			letter = '"';
-			break;
-		case 0x2018:
-		case 0x2019: /* Left and right single quotation mark */
-			letter = '\'';
-			break;
-	}
-
-	if ((letter >= 0x250c) && (letter <= 0x254b))
-	{
-		letter = '+';	 /* various cross symbols */
-	}
+    if ((letter >= 0x250c) && (letter <= 0x254b))
+    {
+        letter = '+';	 /* various cross symbols */
+    }
 
     if (letter < 256)
     {
