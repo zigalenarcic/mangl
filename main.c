@@ -43,6 +43,7 @@
 
 #define MANGL_VERSION_MAJOR 1
 #define MANGL_VERSION_MINOR 0
+#define MANGL_VERSION_PATCH 2
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define ZMALLOC(type, n) ((type *)calloc(n, sizeof(type)))
@@ -151,7 +152,7 @@ struct {
     double line_spacing;
 } settings = { .font_size = 10, .gui_scale = 1.0, .line_spacing = 1.0};
 
-int display_mode = D_MANPAGE;
+int display_mode = D_SEARCH;
 char search_term[512];
 
 char **manpage_names;
@@ -2970,24 +2971,19 @@ void load_settings(void)
 int main(int argc, char *argv[])
 {
     char window_title[576];
+    char tmp_filename[1024];
+    const char *filename = NULL;
+
     manpage_database = hashmap_new();
 
     load_settings();
     make_manpage_database();
 
-    if (argc < 2)
+    if (argc > 1)
     {
-        display_mode = D_SEARCH;
-        strcpy(window_title, "mangl");
-    }
-    else
-    {
-        const char *filename = NULL;
-        char tmp_filename[1024];
-
         if (strcmp(argv[1], "--version") == 0)
         {
-            printf("mangl %d.%d\n", MANGL_VERSION_MAJOR, MANGL_VERSION_MINOR);
+            printf("mangl %d.%d.%d\n", MANGL_VERSION_MAJOR, MANGL_VERSION_MINOR, MANGL_VERSION_PATCH);
             exit(EXIT_SUCCESS);
         }
         else if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0))
@@ -3005,6 +3001,7 @@ int main(int argc, char *argv[])
             {
                 fprintf(stderr, "Argument required after \"-f\"\n");
                 print_usage(argv[0]);
+                exit(EXIT_SUCCESS);
             }
         }
         else
@@ -3025,10 +3022,38 @@ int main(int argc, char *argv[])
             {
                 filename = tmp_filename;
             }
+            else
+            {
+                exit(EXIT_FAILURE);
+            }
         }
+    }
 
-        if (filename == NULL)
-            exit(EXIT_FAILURE);
+    /* init font */
+    init_builtin_font();
+    init_freetype();
+    if (strlen(settings.font_file) > 0)
+    {
+        if (get_font_file(settings.font_file))
+        {
+            render_font_texture(settings.font_file, (int)(settings.gui_scale * settings.font_size));
+            mainFont = loadedFont;
+        }
+        else
+        {
+            fprintf(stderr, "Can't find or resolve font file/name: \"%s\"\n", settings.font_file);
+        }
+    }
+
+    if (filename == NULL)
+    {
+        /* search mode */
+        strcpy(window_title, "mangl");
+    }
+    else
+    {
+        /* display mode */
+        display_mode = D_MANPAGE;
 
         page = load_manpage(filename);
 
@@ -3042,21 +3067,6 @@ int main(int argc, char *argv[])
         else
         {
             sprintf(window_title, "%s - mangl", page->filename);
-        }
-    }
-
-    init_builtin_font();
-    init_freetype();
-    if (strlen(settings.font_file) > 0)
-    {
-        if (get_font_file(settings.font_file))
-        {
-            render_font_texture(settings.font_file, (int)(settings.gui_scale * settings.font_size));
-            mainFont = loadedFont;
-        }
-        else
-        {
-            fprintf(stderr, "Can't find or resolve font file/name: \"%s\"\n", settings.font_file);
         }
     }
 
