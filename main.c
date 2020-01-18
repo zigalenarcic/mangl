@@ -1721,11 +1721,11 @@ void render(void)
                     char tmp[128];
                     if (matches_count == 1)
                     {
-                        sprintf(tmp, "1 match");
+                        snprintf(tmp, sizeof(tmp), "1 match");
                     }
                     else
                     {
-                        sprintf(tmp, "%d matches", matches_count);
+                        snprintf(tmp, sizeof(tmp), "%d matches", matches_count);
                     }
 
                     set_color(COLOR_INDEX_DIM);
@@ -2406,25 +2406,25 @@ static int fs_lookup(const char *path, const char *sec, const char *name, char *
 {
     struct stat sb;
     glob_t globinfo;
-    char file[1024];
+    char file[2048];
 
-    sprintf(file, "%s/man%s/%s.%s", path, sec, name, sec);
+    snprintf(file, sizeof(file), "%s/man%s/%s.%s", path, sec, name, sec);
     if (stat(file, &sb) != -1)
         goto found;
 
-    sprintf(file, "%s/cat%s/%s.0", path, sec, name);
+    snprintf(file, sizeof(file), "%s/cat%s/%s.0", path, sec, name);
     if (stat(file, &sb) != -1)
         goto found;
 
 #if 0
     if (arch != NULL) {
-        sprintf(file, "%s/man%s/%s/%s.%s", path, sec, arch, name, sec);
+        snprintf(file, sizeof(file), "%s/man%s/%s/%s.%s", path, sec, arch, name, sec);
         if (stat(file, &sb) != -1)
             goto found;
     }
 #endif
 
-    sprintf(file, "%s/man%s/%s.[01-9]*", path, sec, name);
+    snprintf(file, sizeof(file), "%s/man%s/%s.[01-9]*", path, sec, name);
     int globres = glob(file, 0, NULL, &globinfo);
     if (globres != 0 && globres != GLOB_NOMATCH)
         warn("%s: glob", file);
@@ -2438,7 +2438,7 @@ static int fs_lookup(const char *path, const char *sec, const char *name, char *
             goto found;
     }
 
-    sprintf(file, "%s.%s", name, sec);
+    snprintf(file, sizeof(file), "%s.%s", name, sec);
     globres = stat(file, &sb);
     if (globres != -1)
     {
@@ -2576,8 +2576,8 @@ static int make_manpage_database(void)
             glob_t globinfo;
             char file[1024];
 
-            sprintf(file, "%s/man%s/*.[01-9]*", path, section);
-            sprintf(file, "%s/man%s/*", path, section);
+            snprintf(file, sizeof(file), "%s/man%s/*.[01-9]*", path, section);
+            snprintf(file, sizeof(file), "%s/man%s/*", path, section);
             int globres = glob(file, 0, NULL, &globinfo);
             if (globres != 0 && globres != GLOB_NOMATCH)
                 warn("%s: glob", file);
@@ -2595,7 +2595,7 @@ static int make_manpage_database(void)
                     {
                         // successful parse
                         char key[576];
-                        sprintf(key, "%s(%s)", page_name, section_name);
+                        snprintf(key, sizeof(key), "%s(%s)", page_name, section_name);
 
                         char *test;
                         if (hashmap_get(manpage_database, key, strlen(key), (void **)&test) == MAP_OK)
@@ -2616,23 +2616,23 @@ static int make_manpage_database(void)
 
             globfree(&globinfo);
 #if 0
-            sprintf(file, "%s/man%s/%s.%s", path, sec, name, sec);
+            snprintf(file, sizeof(file), "%s/man%s/%s.%s", path, sec, name, sec);
             if (stat(file, &sb) != -1)
                 goto found;
 
-            sprintf(file, "%s/cat%s/%s.0", path, sec, name);
+            snprintf(file, sizeof(file), "%s/cat%s/%s.0", path, sec, name);
             if (stat(file, &sb) != -1)
                 goto found;
 
 #if 0
             if (arch != NULL) {
-                sprintf(file, "%s/man%s/%s/%s.%s", path, sec, arch, name, sec);
+                snprintf(file, sizeof(file), "%s/man%s/%s/%s.%s", path, sec, arch, name, sec);
                 if (stat(file, &sb) != -1)
                     goto found;
             }
 #endif
 
-            sprintf(file, "%s/man%s/%s.[01-9]*", path, sec, name);
+            snprintf(file, sizeof(file), "%s/man%s/%s.[01-9]*", path, sec, name);
             int globres = glob(file, 0, NULL, &globinfo);
             if (globres != 0 && globres != GLOB_NOMATCH)
                 warn("%s: glob", file);
@@ -2736,16 +2736,17 @@ void update_window_title()
     {
         case D_MANPAGE:
             {
-                char window_title[576];
+                char window_title[2048];
 
                 if (strlen(page->manpage_name) > 0)
                 {
-                    sprintf(window_title, "%s(%s) - mangl",
+                    snprintf(window_title, sizeof(window_title), "%s(%s) - mangl",
                             page->manpage_name, page->manpage_section);
                 }
                 else
                 {
-                    sprintf(window_title, "%s - mangl", page->filename);
+                    snprintf(window_title, sizeof(window_title), "%s - mangl",
+                            page->filename);
                 }
                 glutSetWindowTitle(window_title);
             }
@@ -2997,7 +2998,7 @@ void load_settings(void)
 
 int main(int argc, char *argv[])
 {
-    char window_title[576];
+    char window_title[2048];
     char tmp_filename[1024];
     const char *filename = NULL;
 
@@ -3093,11 +3094,11 @@ int main(int argc, char *argv[])
 
         if (strlen(page->manpage_name) > 0)
         {
-            sprintf(window_title, "%s(%s) - mangl", page->manpage_name, page->manpage_section);
+            snprintf(window_title, sizeof(window_title), "%s(%s) - mangl", page->manpage_name, page->manpage_section);
         }
         else
         {
-            sprintf(window_title, "%s - mangl", page->filename);
+            snprintf(window_title, sizeof(window_title), "%s - mangl", page->filename);
         }
     }
 
