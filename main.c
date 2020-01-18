@@ -43,7 +43,7 @@
 
 #define MANGL_VERSION_MAJOR 1
 #define MANGL_VERSION_MINOR 0
-#define MANGL_VERSION_PATCH 2
+#define MANGL_VERSION_PATCH 3
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define ZMALLOC(type, n) ((type *)calloc(n, sizeof(type)))
@@ -95,7 +95,8 @@ typedef struct {
 typedef struct {
     recti document_rectangle;
     int highlight;
-    char link[256];
+    char link[1024];
+    char pwd[1024];
 } link_t;
 
 typedef struct {
@@ -183,6 +184,7 @@ int window_width;
 int window_height;
 
 map_t manpage_database;
+map_t manpage_database_pwd;
 
 FT_Library library;
 
@@ -528,7 +530,8 @@ struct manpage
 {
     char manpage_name[128];
     char manpage_section[64];
-    char filename[512];
+    char filename[1024];
+    char pwd[1024];
 
     struct {
         struct span **lines;
@@ -556,7 +559,7 @@ struct manpage *formatting_page; // used when formatting page
 struct manpage **page_stack;
 size_t stack_pos; // index of displayed page + 1
 
-void open_new_page(const char *filename);
+void open_new_page(const char *filename, const char *pwd);
 void page_back(void);
 void page_forward(void);
 
@@ -976,9 +979,12 @@ void find_links(struct manpage *p)
                         {
                             /* word is complete */
                             current_word[word_pos] = 0;
-                            char *tmp;
-                            if (hashmap_get(manpage_database, current_word, strlen(current_word), (void **)&tmp) == MAP_OK)
+                            char *man_file;
+                            if (hashmap_get(manpage_database, current_word, strlen(current_word), (void **)&man_file) == MAP_OK)
                             {
+                                char *pwd = NULL;
+                                hashmap_get(manpage_database_pwd, current_word, strlen(current_word), (void **)&pwd);
+
                                 /* we have a link */
                                 link_t l;
                                 l.document_rectangle.x = ((intptr_t)str - (intptr_t)line + 1 - strlen(current_word)) * get_character_width();
@@ -986,7 +992,9 @@ void find_links(struct manpage *p)
                                 l.document_rectangle.x2 = l.document_rectangle.x + strlen(current_word) * get_character_width();
                                 l.document_rectangle.y2 = l.document_rectangle.y + get_line_height();
 
-                                strcpy(l.link, tmp);
+                                strcpy(l.link, man_file);
+                                strcpy(l.pwd, pwd ? pwd : "");
+
                                 l.highlight = 0;
 
                                 sb_push(p->links, l);
@@ -1908,7 +1916,7 @@ void mouse_func(int button, int state, int x, int y)
                                     && (strcmp(l->link, link.link) == 0))
                             {
                                 // follow the link in the same instance
-                                open_new_page(link.link);
+                                open_new_page(link.link, link.pwd);
                             }
                         }
                     }
@@ -1951,10 +1959,13 @@ void mouse_func(int button, int state, int x, int y)
                             {
                                 results_selected_index = actual_index;
                                 const char *key = manpage_names[matches[results_selected_index].idx];
-                                char *test;
-                                if (hashmap_get(manpage_database, key, strlen(key), (void **)&test) == MAP_OK)
+                                char *man_file;
+                                if (hashmap_get(manpage_database, key, strlen(key), (void **)&man_file) == MAP_OK)
                                 {
-                                    open_new_page(test);
+                                    char *pwd = NULL;
+                                    hashmap_get(manpage_database_pwd, key, strlen(key), (void **)&pwd);
+
+                                    open_new_page(man_file, pwd);
                                 }
                             }
                         }
@@ -2288,7 +2299,10 @@ void keyboard_func(unsigned char key, int x, int y)
                     char *test;
                     if (hashmap_get(manpage_database, key, strlen(key), (void **)&test) == MAP_OK)
                     {
-                        open_new_page(test);
+                        char *pwd = NULL;
+                        hashmap_get(manpage_database_pwd, key, strlen(key), (void **)&pwd);
+
+                        open_new_page(test, pwd);
                     }
                 }
                 break;
@@ -2583,15 +2597,18 @@ static int make_manpage_database(void)
                         char key[576];
                         sprintf(key, "%s(%s)", page_name, section_name);
 
-                        char *file = strdup(globinfo.gl_pathv[i]);
                         char *test;
                         if (hashmap_get(manpage_database, key, strlen(key), (void **)&test) == MAP_OK)
                         {
                             //printf("Key present, removing\n");
                             hashmap_remove(manpage_database, key, strlen(key));
+                            hashmap_remove(manpage_database_pwd, key, strlen(key));
                             free(test);
                         }
+                        char *file = strdup(globinfo.gl_pathv[i]);
+                        char *pwd = strdup(path);
                         hashmap_put(manpage_database, key, strlen(key), file);
+                        hashmap_put(manpage_database_pwd, key, strlen(key), pwd);
                         sb_push(manpage_names, strdup(key));
                     }
                 }
@@ -2639,7 +2656,12 @@ static int make_manpage_database(void)
     return 0;
 }
 
-struct manpage *load_manpage(const char *filename)
+void change_dir(const char *path)
+{
+    chdir(path);
+}
+
+struct manpage *load_manpage(const char *filename, const char *pwd)
 {
     mchars_alloc(); // initialize charset table
 
@@ -2667,6 +2689,8 @@ struct manpage *load_manpage(const char *filename)
     struct manpage *page = ZMALLOC(struct manpage, 1);
 
     strcpy(page->filename, filename);
+    strcpy(page->pwd, pwd ? pwd : "");
+
     get_page_name_and_section(filename, page->manpage_name, page->manpage_section);
 
     add_line(page);
@@ -2733,9 +2757,12 @@ void update_window_title()
     }
 }
 
-void open_new_page(const char *filename)
+void open_new_page(const char *filename, const char *pwd)
 {
-    struct manpage *new_page = load_manpage(filename);
+    if (page && strlen(page->pwd))
+        change_dir(page->pwd); /* make sure load_manpage can succeed (if it uses source command) */
+
+    struct manpage *new_page = load_manpage(filename, pwd);
 
     // put on stack
     if (stack_pos < sb_count(page_stack))
@@ -2975,6 +3002,7 @@ int main(int argc, char *argv[])
     const char *filename = NULL;
 
     manpage_database = hashmap_new();
+    manpage_database_pwd = hashmap_new();
 
     load_settings();
     make_manpage_database();
@@ -3055,7 +3083,10 @@ int main(int argc, char *argv[])
         /* display mode */
         display_mode = D_MANPAGE;
 
-        page = load_manpage(filename);
+        char pwd[1024];
+        getcwd(pwd, sizeof(pwd));
+
+        page = load_manpage(filename, pwd);
 
         sb_push(page_stack, page);
         stack_pos++;
