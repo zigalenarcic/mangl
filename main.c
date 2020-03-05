@@ -642,6 +642,12 @@ void add_to_span(struct span *s, int letter)
         case 0x2019: /* Left and right single quotation mark */
             letter = '\'';
             break;
+        case 0x27e8:
+            letter = '<';
+            break;
+        case 0x27e9:
+            letter = '>';
+            break;
     }
 
     if ((letter >= 0x250c) && (letter <= 0x254b))
