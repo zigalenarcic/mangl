@@ -1,0 +1,76 @@
+.\"
+.Dd $Mdocdate: January 17 2020 $
+.Dt MANGL 1
+.Os
+.Sh NAME
+.Nm mangl
+.Nd graphical man page viewer
+.Sh SYNOPSIS
+.Nm mangl
+.Op section
+.Op manpage
+.Sh DESCRIPTION
+The
+.Nm
+utility uses OpenGL to display man pages with clickable hyperlinks
+and smooth scrolling.
+.Sh MANGL STARTUP FILE
+The
+.Ar .manglrc
+file may contain configuration options.  The defaults are
+.Bd -literal -offset indent
+font: Anonymous Pro
+font_size: 10
+gui_scale: 1
+line_spacing: 1
+initial_window_rows: 40
+color_background: #151515
+color_foreground: #fdfde8
+color_bold: #a4d4f1
+color_italic: #ffce79
+color_dim: #7b7b7b
+color_scrollbar_background: #262626
+color_scrollbar_thumb: #454545
+color_scrollbar_thumb_hover: #545454
+color_link: #4515ff
+color_gui_1: #ebb470
+color_gui_2: #8fbfdc
+color_error: #ff1515
+color_searches: #1515ff
+color_search_selected: #15ff15
+.Ed
+font parameter uses the fc-match external program to find the font
+file. The font file can also be specified directly.
+.Sh KEYBOARD AND MOUSE COMMANDS
+.Bl -tag -width Ds
+.It Cm j
+Move the cursor down one line.
+.It Cm k
+Move the cursor up one line.
+.It Aq Cm cursor-arrows
+The cursor arrow keys should work, too.
+.It Ao Cm space Ac , Ao shift-space Ac
+Scroll by one page.
+.It Ao Cm page-up Ac , Ao page-down Ac
+Scroll by one page.
+.It Cm gg , Ao Home Ac
+Go to beginning of the page.
+.It Cm G , Ao End Ac
+Go to the end of the page.
+.It Cm b , Ao Esc Ac , Ao right-mouse-click Ac
+Go back to the previous page.
+.It Cm f
+Go forward to the next page after going back with b.
+.It Aq Cm Ctrl-F
+Open search for manpages.
+.It Cm q , Ao Ctrl-C Ac , Ao Ctrl-D Ac
+Exit the program.
+.It Cm / Ns text
+Search for the string
+.Dq text
+in the file,
+and move the cursor to its first character.  Case insensitive
+unless text is mixed-case.
+.It Cm n, N
+Move to the next (N:previous) location of text.
+.El
