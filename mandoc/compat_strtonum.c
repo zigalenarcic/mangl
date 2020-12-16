@@ -2,7 +2,6 @@
 
 #if HAVE_STRTONUM
 
-int dummy;
 
 #else
 

@@ -2,7 +2,6 @@
 
 #if HAVE_STRINGLIST
 
-int dummy;
 
 #else
 

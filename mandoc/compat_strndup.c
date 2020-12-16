@@ -2,7 +2,6 @@
 
 #if HAVE_STRNDUP
 
-int dummy;
 
 #else
 

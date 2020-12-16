@@ -2,7 +2,6 @@
 
 #if HAVE_GETLINE
 
-int dummy;
 
 #else
 

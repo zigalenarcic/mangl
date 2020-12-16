@@ -2,7 +2,6 @@
 
 #if HAVE_OHASH
 
-int dummy;
 
 #else
 

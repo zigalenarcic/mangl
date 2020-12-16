@@ -2,7 +2,6 @@
 
 #if HAVE_STRCASESTR
 
-int dummy;
 
 #else
 

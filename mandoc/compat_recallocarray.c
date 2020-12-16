@@ -2,7 +2,6 @@
 
 #if HAVE_RECALLOCARRAY
 
-int dummy;
 
 #else
 

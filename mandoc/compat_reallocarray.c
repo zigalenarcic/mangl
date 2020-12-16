@@ -2,7 +2,6 @@
 
 #if HAVE_REALLOCARRAY
 
-int dummy;
 
 #else
 
