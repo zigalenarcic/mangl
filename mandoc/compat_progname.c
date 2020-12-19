@@ -2,7 +2,6 @@
 
 #if HAVE_PROGNAME
 
-int dummy;
 
 #else
 

@@ -2,7 +2,6 @@
 
 #if HAVE_ERR
 
-int dummy;
 
 #else
 

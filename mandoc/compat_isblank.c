@@ -2,7 +2,6 @@
 
 #if HAVE_ISBLANK
 
-int dummy;
 
 #else
 

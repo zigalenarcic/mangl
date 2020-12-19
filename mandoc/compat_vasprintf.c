@@ -2,7 +2,6 @@
 
 #if HAVE_VASPRINTF
 
-int dummy;
 
 #else
 

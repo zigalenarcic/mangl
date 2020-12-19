@@ -2,7 +2,6 @@
 
 #if HAVE_STRSEP
 
-int dummy;
 
 #else
 

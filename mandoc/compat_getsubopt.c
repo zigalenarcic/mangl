@@ -2,7 +2,6 @@
 
 #if HAVE_GETSUBOPT
 
-int dummy;
 
 #else
 

@@ -2,7 +2,6 @@
 
 #if HAVE_STRLCPY
 
-int dummy;
 
 #else
 

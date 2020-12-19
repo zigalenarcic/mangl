@@ -2,7 +2,6 @@
 
 #if HAVE_MKDTEMP
 
-int dummy;
 
 #else
 

@@ -2,7 +2,6 @@
 
 #if HAVE_FTS
 
-int dummy;
 
 #else
 

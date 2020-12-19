@@ -2,7 +2,6 @@
 
 #if HAVE_STRLCAT
 
-int dummy;
 
 #else
 
