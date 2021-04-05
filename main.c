@@ -2906,13 +2906,30 @@ void parse_color(const char *value, float *rgb)
 
 void load_settings(void)
 {
-    const char *rc_filename = ".manglrc";
-    char *home = getenv("HOME");
+    char settings_filename[512];
+    FILE *f = NULL;
 
-    char settings_filename[256];
-    snprintf(settings_filename, sizeof(settings_filename), "%s/%s", home, rc_filename);
+    char *xdg_home = getenv("XDG_CONFIG_HOME");
+    if (xdg_home)
+    {
+        snprintf(settings_filename, sizeof(settings_filename), "%s/mangl/manglrc", xdg_home);
+        f = fopen(settings_filename, "rb");
+    }
 
-    FILE *f = fopen(settings_filename, "rb");
+    if (f == NULL)
+    {
+        char *home = getenv("HOME");
+        snprintf(settings_filename, sizeof(settings_filename), "%s/.config/mangl/manglrc", home);
+        f = fopen(settings_filename, "rb");
+    }
+
+    if (f == NULL)
+    {
+        char *home = getenv("HOME");
+        snprintf(settings_filename, sizeof(settings_filename), "%s/.manglrc", home);
+        f = fopen(settings_filename, "rb");
+    }
+
     if (f == NULL)
     {
         return;
