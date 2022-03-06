@@ -924,8 +924,6 @@ int document_height(void)
 
 void find_links(struct manpage *p)
 {
-    int vertical_position = 0;
-
     for (int i = 0; i < p->document.n_lines; i++)
     {
         struct span *s = p->document.lines[i];
@@ -937,8 +935,6 @@ void find_links(struct manpage *p)
         {
             if (s->length > 0)
             {
-                //draw_string(s->buffer, get_dimension(DIM_DOCUMENT_MARGIN), get_dimension(DIM_DOCUMENT_MARGIN) + vertical_position - page->scroll_position);
-
                 int pos = 0;
 
                 char *in = s->buffer;
@@ -1030,8 +1026,6 @@ void find_links(struct manpage *p)
             }
             s = s->next;
         }
-
-        vertical_position += get_line_advance();
     }
 }
 
@@ -1065,8 +1059,6 @@ void update_page_search(struct manpage *p)
     {
         ignore_case = 0;
     }
-
-    int vertical_position = 0;
 
     for (int i = 0; i < p->document.n_lines; i++)
     {
@@ -1150,8 +1142,6 @@ void update_page_search(struct manpage *p)
                 return;
             }
         }
-
-        vertical_position += get_line_advance();
     }
 }
 
