@@ -2562,7 +2562,7 @@ int ends_with_ignore_case(const char *str, const char *ending)
     return -1;
 }
 
-int get_page_name_and_section(const char *pathname, char *name, char *section)
+int get_page_name_and_section(const char *pathname, char *name, size_t name_len, char *section, size_t section_len)
 {
     int len = strlen(pathname);
     if (len > 0)
@@ -2596,9 +2596,10 @@ int get_page_name_and_section(const char *pathname, char *name, char *section)
             {
                 if (filename[i] == '.')
                 {
-                    strcpy(section, &filename[i + 1]);
-                    memcpy(name, filename, i);
-                    name[i] = 0;
+                    strncpy(section, &filename[i + 1], section_len);
+                    section[section_len - 1] = 0;
+                    memcpy(name, filename, MIN(i, name_len - 1));
+                    name[MIN(i, name_len - 1)] = 0;
                     return 0;
                 }
 
@@ -2649,11 +2650,11 @@ static int make_manpage_database(void)
                 // there are matches
                 for (int i = 0; i < globinfo.gl_pathc; i++)
                 {
-                    //printf("%s\n", globinfo.gl_pathv[i]);
+                    //printf("%s [all %ld]\n", globinfo.gl_pathv[i], globinfo.gl_pathc);
 
                     char page_name[512];
-                    char section_name[3];
-                    if (get_page_name_and_section(globinfo.gl_pathv[i], page_name, section_name) == 0)
+                    char section_name[64];
+                    if (get_page_name_and_section(globinfo.gl_pathv[i], page_name, sizeof(page_name), section_name, sizeof(section_name)) == 0)
                     {
                         // successful parse
                         char key[576];
@@ -2668,7 +2669,9 @@ static int make_manpage_database(void)
                             free(test);
                         }
                         char *file = strdup(globinfo.gl_pathv[i]);
-                        char *pwd = strdup(path);
+                        size_t path_len = strlen(path) + 1;
+                        char *pwd = malloc(path_len);
+                        memcpy(pwd, path, path_len);
                         hashmap_put(manpage_database, key, strlen(key), file);
                         hashmap_put(manpage_database_pwd, key, strlen(key), pwd);
                         sb_push(manpage_names, strdup(key));
@@ -2753,7 +2756,7 @@ struct manpage *load_manpage(const char *filename, const char *pwd)
     strcpy(page->filename, filename);
     strcpy(page->pwd, pwd ? pwd : "");
 
-    get_page_name_and_section(filename, page->manpage_name, page->manpage_section);
+    get_page_name_and_section(filename, page->manpage_name, sizeof(page->manpage_name), page->manpage_section, sizeof(page->manpage_section));
 
     add_line(page);
 
