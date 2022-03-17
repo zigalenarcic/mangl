@@ -510,11 +510,16 @@ int render_font_texture(const char *font_file, int font_size_px)
 
 void print_usage(const char *exe)
 {
-    fprintf(stderr, "Usage:\n");
-    fprintf(stderr, "%s\n", exe);
-    fprintf(stderr, "%s [section] man_page\n", exe);
-    fprintf(stderr, "%s -f man_page_file\n", exe);
+    fprintf(stderr, "Usage: mangl [OPTION]... [[SECTION] PAGE]\n");
+    fprintf(stderr, "Display the manpage PAGE in section SECTION in a graphical application\n");
+    fprintf(stderr, "or open the application with the search screen.\n");
     fprintf(stderr, "\n");
+    fprintf(stderr, "  --no-fork                 don't fork the GUI\n");
+    fprintf(stderr, "  -h, --help                print usage\n");
+    fprintf(stderr, "  --version                 print version and quit\n");
+    fprintf(stderr, "  -l, --local-file          interpret the PAGE argument as a local filename\n");
+    fprintf(stderr, "\n");
+    fprintf(stderr, "Report bugs to ziga.lenarcic@gmail.com.\n");
 
     exit(1);
 }
@@ -2544,11 +2549,6 @@ static int search_filesystem(const char *section, const char *search_term, char 
         }
     }
 
-    if (section == NULL)
-        fprintf(stderr, "No entry for %s in the manual.\n", search_term);
-    else
-        fprintf(stderr, "No entry for %s in section %s of the manual.\n", search_term, section);
-
     return -1;
 }
 
@@ -3088,6 +3088,8 @@ int main(int argc, char *argv[])
     char window_title[2048];
     char tmp_filename[1024];
     const char *filename = NULL;
+    int no_fork = 0;
+    int local_file = 0;
 
     manpage_database = hashmap_new();
     manpage_database_pwd = hashmap_new();
@@ -3095,52 +3097,102 @@ int main(int argc, char *argv[])
     load_settings();
     make_manpage_database();
 
-    if (argc > 1)
+    const char *first_arg = NULL;
+    const char *second_arg = NULL;
+
+    for (int i_arg = 1; i_arg < argc; i_arg++)
     {
-        if (strcmp(argv[1], "--version") == 0)
+        if (argv[i_arg][0] == '-')
         {
-            printf("mangl %d.%d.%d\n", MANGL_VERSION_MAJOR, MANGL_VERSION_MINOR, MANGL_VERSION_PATCH);
-            exit(EXIT_SUCCESS);
-        }
-        else if ((strcmp(argv[1], "-h") == 0) || (strcmp(argv[1], "--help") == 0))
-        {
-            print_usage(argv[0]);
-            exit(EXIT_SUCCESS);
-        }
-        else if (strcmp(argv[1], "-f") == 0)
-        {
-            if (argc >= 3)
+            if (strcmp(argv[i_arg], "--version") == 0)
             {
-                filename = argv[2];
+                printf("mangl %d.%d.%d\n", MANGL_VERSION_MAJOR, MANGL_VERSION_MINOR, MANGL_VERSION_PATCH);
+                exit(EXIT_SUCCESS);
+            }
+            else if (strcmp(argv[i_arg], "--no-fork") == 0)
+            {
+                no_fork = 1;
+            }
+            else if ((strcmp(argv[i_arg], "-h") == 0) || (strcmp(argv[i_arg], "--help") == 0))
+            {
+                print_usage(argv[0]);
+                exit(EXIT_SUCCESS);
+            }
+            else if ((strcmp(argv[i_arg], "-l") == 0) || (strcmp(argv[i_arg], "--local-file") == 0))
+            {
+                local_file = 1;
             }
             else
             {
-                fprintf(stderr, "Argument required after \"-f\"\n");
-                print_usage(argv[0]);
-                exit(EXIT_SUCCESS);
+                fprintf(stderr, "mangl: unknown argument '%s'\n", argv[i_arg]);
+                fprintf(stderr, "Try 'mangl --help' for more information.\n");
+                exit(EXIT_FAILURE);
             }
         }
         else
         {
-            const char *section = NULL;
-            const char *search_term = NULL;
-            if (argc == 2)
+            if (first_arg && second_arg)
             {
-                search_term = argv[1];
+                fprintf(stderr, "mangl: unexpected argument '%s'\n", argv[i_arg]);
+                fprintf(stderr, "Try 'mangl --help' for more information.\n");
+                exit(EXIT_FAILURE);
             }
-            else if (argc == 3)
+            else if (first_arg)
             {
-                section = argv[1];
-                search_term = argv[2];
-            }
-
-            if (search_filesystem(section, search_term, tmp_filename) == 0)
-            {
-                filename = tmp_filename;
+                second_arg = argv[i_arg];
             }
             else
             {
+                first_arg = argv[i_arg];
+            }
+        }
+    }
+
+    if (local_file == 1)
+    {
+        if (first_arg)
+        {
+            filename = second_arg ? second_arg : first_arg;
+        }
+        else
+        {
+            fprintf(stderr, "mangl: option requires an argument -- '-l, --local-file'\n");
+            fprintf(stderr, "Try 'mangl --help' for more information.\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+    else
+    {
+        if (first_arg)
+        {
+            const char *section = NULL;
+            const char *search_term = NULL;
+            if (second_arg)
+            {
+                section = first_arg;
+                search_term = second_arg;
+            }
+            else if (first_arg)
+            {
+                search_term = first_arg;
+            }
+
+            if (search_filesystem(section, search_term, tmp_filename) == -1)
+            {
+                if (section == NULL)
+                {
+                    fprintf(stderr, "No entry for %s in the manual.\n", search_term);
+                }
+                else
+                {
+                    fprintf(stderr, "No entry for %s in section %s of the manual.\n", search_term, section);
+                }
+
                 exit(EXIT_FAILURE);
+            }
+            else
+            {
+                filename = tmp_filename;
             }
         }
     }
@@ -3190,9 +3242,12 @@ int main(int argc, char *argv[])
     }
 
     /* display gui */
-    if (fork() != 0)
+    if (!no_fork)
     {
-        exit(EXIT_SUCCESS);
+        if (fork() != 0)
+        {
+            exit(EXIT_SUCCESS);
+        }
     }
 
     if (!glfwInit())
