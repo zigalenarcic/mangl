@@ -20,6 +20,7 @@
 #include <glob.h>
 #include <err.h>
 #include <stdbool.h>
+#include <ctype.h>
 #include <GL/gl.h>
 #include <GLFW/glfw3.h>
 
@@ -153,6 +154,7 @@ int display_mode = D_SEARCH;
 char search_term[512];
 
 char **manpage_names;
+char **manpage_names_lower;
 
 #define N_SHOWN_RESULTS 12
 int results_selected_index = 0;
@@ -1557,16 +1559,16 @@ void update_search(void)
     }
     else
     {
-        int count = sb_count(manpage_names);
+        int count = sb_count(manpage_names_lower);
 
         for (int i = 0; i < count; i++)
         {
-            int position = find_string(search_term, manpage_names[i]);
+            int position = find_string(search_term, manpage_names_lower[i]);
 
             if (position >= 0)
             {
                 matches[matches_count].idx = i;
-                matches[matches_count].goodness = -position * 100 - (strlen(manpage_names[i]) - search_term_len);
+                matches[matches_count].goodness = -position * 100 - (strlen(manpage_names_lower[i]) - search_term_len);
                 matches_count++;
 
                 if (matches_count >= ARRAY_SIZE(matches))
@@ -2611,9 +2613,9 @@ int get_page_name_and_section(const char *pathname, char *name, size_t name_len,
     return -1;
 }
 
-int cmp_str(const void *a, const void *b)
+int cmp_manpage_name_idx(const void *a, const void *b)
 {
-    return strcmp(*(char **)a, *(char **)b);
+    return strcmp(manpage_names_lower[*(const int *)a], manpage_names_lower[*(const int *)b]);
 }
 
 static int make_manpage_database(void)
@@ -2675,6 +2677,11 @@ static int make_manpage_database(void)
                         hashmap_put(manpage_database, key, strlen(key), file);
                         hashmap_put(manpage_database_pwd, key, strlen(key), pwd);
                         sb_push(manpage_names, strdup(key));
+                        char *lowercase = strdup(key);
+                        for (char *c = lowercase; *c; c++)
+                            *c = tolower(*c);
+
+                        sb_push(manpage_names_lower, lowercase);
                     }
                 }
             }
@@ -2716,7 +2723,35 @@ static int make_manpage_database(void)
         }
     }
 
-    qsort(manpage_names, sb_count(manpage_names), sizeof(char *), &cmp_str);
+    /**
+     * Sort both arrays: manpage_names and manpage_names_lower with the same order
+     */
+
+    int count = sb_count(manpage_names);
+
+    if (count > 0)
+    {
+        int *indices = (int *)malloc(sizeof(int) * count);
+        char **tmp = (char **)malloc(sizeof(char *) * count);
+        if (indices && tmp)
+        {
+            for (int i = 0; i < count; i++)
+                indices[i] = i;
+
+            qsort(indices, count, sizeof(int), &cmp_manpage_name_idx);
+
+            memcpy(tmp, manpage_names, sizeof(char *) * count);
+            for (int i = 0; i < count; i++)
+                manpage_names[i] = tmp[indices[i]];
+
+            memcpy(tmp, manpage_names_lower, sizeof(char *) * count);
+            for (int i = 0; i < count; i++)
+                manpage_names_lower[i] = tmp[indices[i]];
+        }
+
+        if (tmp) free(tmp);
+        if (indices) free(indices);
+    }
 
     return 0;
 }
