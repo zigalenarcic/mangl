@@ -2909,6 +2909,7 @@ void page_back(void)
     {
         display_mode = D_SEARCH;
         stack_pos = 0;
+        update_window_title();
         post_redisplay();
     }
 }
