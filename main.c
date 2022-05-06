@@ -193,6 +193,8 @@ map_t manpage_database_pwd;
 
 FT_Library library;
 
+void update_window_title(void);
+
 void terminal_mdoc(void *, const struct roff_meta *);
 void terminal_man(void *, const struct roff_meta *);
 
@@ -1538,9 +1540,67 @@ int find_string(const char *search_term, const char *text)
     return -1;
 }
 
-int compar_match(const void *a, const void *b)
+int compar_match_rev(const void *a, const void *b)
 {
     return ((const int *)b)[1] - ((const int *)a)[1];
+}
+
+int binary_search_first(const void *key, const void *data, size_t nmemb, size_t size, int (*compar)(const void *, const void *))
+{
+    /* ordering is assumed ascending - so compar(el_0, el_1) <= 0 for any two subsequent elements */
+    if (nmemb <= 0)
+        return 0;
+
+    int start = 0;
+    int end = nmemb - 1;
+
+    const unsigned char *u8_data = (const unsigned char *)data;
+
+    int c_start = compar(key, &u8_data[0]);
+    int c_end = compar(key, &u8_data[(nmemb - 1) * size]);
+
+    if (c_start <= 0)
+        return 0;
+
+    if (c_end > 0)
+        return nmemb;
+
+    while (end > (start + 1))
+    {
+        int mid = (end + start) / 2;
+        int c = compar(key, &u8_data[mid * size]);
+        //printf("start %d mid %d end %d, mid comp = %d\n", start, mid, end, c);
+
+        if (c <= 0) /* end will contain the matching field */
+        {
+            end = mid;
+        }
+        else if (c > 0)
+        {
+            start = mid;
+        }
+    }
+    //printf("start %d end %d \n", start, end);
+
+    return end;
+}
+
+void insert_array(const void *key, int index, void *data, size_t nmemb, size_t size)
+{
+    if (index < 0)
+        return;
+
+    if (index >= nmemb)
+        return;
+
+    unsigned char *u8_data = (unsigned char *)data;
+
+    for (int i = (nmemb - 2); i >= index; i--)
+    {
+        memcpy(&u8_data[(i + 1) * size], &u8_data[i * size], size);
+    }
+
+    memcpy(&u8_data[index * size], key, size); /* copy element */
 }
 
 void update_search(void)
@@ -1559,27 +1619,42 @@ void update_search(void)
     }
     else
     {
-        int count = sb_count(manpage_names_lower);
+        int search_uppercase_characters = 0;
 
-        for (int i = 0; i < count; i++)
+        for (const char *c = search_term; *c; c++)
         {
-            int position = find_string(search_term, manpage_names_lower[i]);
-
-            if (position >= 0)
+            if (isupper(*c))
             {
-                matches[matches_count].idx = i;
-                matches[matches_count].goodness = -position * 100 - (strlen(manpage_names_lower[i]) - search_term_len);
-                matches_count++;
-
-                if (matches_count >= ARRAY_SIZE(matches))
-                {
-                    break;
-                }
+                search_uppercase_characters = 1;
+                break;
             }
         }
 
-        qsort(matches, matches_count, sizeof(matches[0]),
-                &compar_match);
+        char **manpage_names_chosen = search_uppercase_characters ? manpage_names : manpage_names_lower;
+
+        int count = sb_count(manpage_names_chosen);
+
+        for (int i = 0; i < count; i++)
+        {
+            int position = find_string(search_term, manpage_names_chosen[i]);
+
+            if (position >= 0)
+            {
+                int goodness = -position * 100 - (strlen(manpage_names_chosen[i]) - search_term_len);
+
+                int key[2] = {i, goodness};
+
+                int index = binary_search_first(key, matches, matches_count, sizeof(matches[0]), &compar_match_rev);
+
+                if (index < ARRAY_SIZE(matches))
+                {
+                    insert_array(key, index, matches,  ARRAY_SIZE(matches), sizeof(matches[0]));
+
+                    if (matches_count < ARRAY_SIZE(matches))
+                        matches_count++;
+                }
+            }
+        }
     }
 }
 
@@ -2220,6 +2295,7 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                         if (mods & GLFW_MOD_CONTROL)
                         {
                             display_mode = D_SEARCH;
+                            update_window_title();
                             post_redisplay();
                         }
                         break;
@@ -2830,7 +2906,7 @@ struct manpage *load_manpage(const char *filename, const char *pwd)
     return page;
 }
 
-void update_window_title()
+void update_window_title(void)
 {
     switch (display_mode)
     {
