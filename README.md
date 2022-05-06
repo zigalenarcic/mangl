@@ -4,7 +4,7 @@ Mangl is a graphical man page viewer based on the mandoc library (https://mandoc
 
 ![Anim](screenshot/anim.gif)
 
-It uses OpenGL to display man pages with clickable hyperlinks and smooth scrolling.
+It uses OpenGL with GLFW to display man pages with clickable hyperlinks and smooth scrolling.
 
 Features:
 * searching of man pages

@@ -39,8 +39,8 @@
 #include "mandoc/term.h"
 
 #define MANGL_VERSION_MAJOR 1
-#define MANGL_VERSION_MINOR 0
-#define MANGL_VERSION_PATCH 3
+#define MANGL_VERSION_MINOR 1
+#define MANGL_VERSION_PATCH 0
 
 #define ARRAY_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define ZMALLOC(type, n) ((type *)calloc(n, sizeof(type)))
