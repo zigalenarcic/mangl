@@ -634,6 +634,9 @@ void add_to_span(struct span *s, int letter)
         case 0x2501: /* Box drawings heavy horizontal */
             letter = '-';
             break;
+        case 0x2217: /* Asterisk Operator */
+            letter = '*';
+            break;
         case 0x2502: /* Box drawings light vertical */
         case 0x2503: /* Box drawings heavy vertical */
             letter = '|';
