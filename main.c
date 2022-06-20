@@ -2738,7 +2738,7 @@ static int make_manpage_database(void)
                     if (get_page_name_and_section(globinfo.gl_pathv[i], page_name, sizeof(page_name), section_name, sizeof(section_name)) == 0)
                     {
                         // successful parse
-                        char key[576];
+                        char key[577];
                         snprintf(key, sizeof(key), "%s(%s)", page_name, section_name);
 
                         char *test;
@@ -2837,7 +2837,10 @@ static int make_manpage_database(void)
 
 void change_dir(const char *path)
 {
-    chdir(path);
+    if (chdir(path) != 0)
+    {
+        fprintf(stderr, "Failed to change directory to \"%s\" (%s).\n", path, strerror(errno));
+    }
 }
 
 struct manpage *load_manpage(const char *filename, const char *pwd)
@@ -3339,7 +3342,10 @@ int main(int argc, char *argv[])
         display_mode = D_MANPAGE;
 
         char pwd[1024];
-        getcwd(pwd, sizeof(pwd));
+        if (getcwd(pwd, sizeof(pwd)) == NULL)
+        {
+            pwd[0] = '\0';
+        }
 
         page = load_manpage(filename, pwd);
 
