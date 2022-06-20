@@ -25,17 +25,10 @@ libraries). On Debian systems run:
 sudo apt install pkg-config libz-dev libgl-dev libglfw3-dev libfreetype6-dev
 ```
 
-First run `./configure` in mandoc folder:
+Then, run the usual
 
 ```
-cd mandoc
 ./configure
-```
-
-Then run `make` in root folder:
-
-```
-cd ..
 make
 ```
 
