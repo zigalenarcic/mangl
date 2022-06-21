@@ -64,6 +64,7 @@ MANGL_SOURCES = mandoc/tree.c \
 				mandoc/term_ascii.c \
 				mandoc/term.c \
 				mandoc/term_tab.c \
+				mandoc/term_tag.c \
 				mandoc/out.c \
 				hashmap.c \
 				main.c
