@@ -1,3 +1,5 @@
+include mandoc/Makefile.local
+
 CFLAGS = -g -O2 -Wall $(shell pkg-config --cflags zlib gl freetype2)
 LDFLAGS = -lm -lglfw $(shell pkg-config --libs zlib gl freetype2)
 
@@ -36,23 +38,7 @@ LIBMANDOC_OBJS	 = $(LIBMAN_OBJS) \
 				   mandoc/preconv.o \
 				   mandoc/read.o
 
-COMPAT_OBJS	 = mandoc/compat_err.o \
-			   mandoc/compat_fts.o \
-			   mandoc/compat_getline.o \
-			   mandoc/compat_getsubopt.o \
-			   mandoc/compat_isblank.o \
-			   mandoc/compat_mkdtemp.o \
-			   mandoc/compat_ohash.o \
-			   mandoc/compat_progname.o \
-			   mandoc/compat_reallocarray.o \
-			   mandoc/compat_recallocarray.o \
-			   mandoc/compat_strcasestr.o \
-			   mandoc/compat_strlcat.o \
-			   mandoc/compat_strlcpy.o \
-			   mandoc/compat_strndup.o \
-			   mandoc/compat_strsep.o \
-			   mandoc/compat_strtonum.o \
-			   mandoc/compat_vasprintf.o
+COMPAT_OBJS	 = ${MANDOC_COBJS:%=mandoc/%}
 
 MANGL_SOURCES = mandoc/tree.c \
 				mandoc/mdoc_term.c \
