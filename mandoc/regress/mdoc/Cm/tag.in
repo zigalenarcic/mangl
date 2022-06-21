@@ -1,0 +1,27 @@
+.\" $OpenBSD: tag.in,v 1.2 2020/03/21 00:20:38 schwarze Exp $
+.Dd $Mdocdate: March 21 2020 $
+.Dt CM-TAG 1
+.Os
+.Sh NAME
+.Nm Cm-tag
+.Nd tagging of command modifier macros
+.Sh DESCRIPTION
+BEGINTEST
+.Bl -tag -width Ds
+.It Cm one | \&two
+text
+.It Xo
+.Cm three
+.Xc
+text
+.It Cm -hyphen
+text
+.It Cm \-minus\-sign
+text
+.It Cm \ebackslash
+text
+.El
+.Tg
+.Cm four
+.Pp
+ENDTEST

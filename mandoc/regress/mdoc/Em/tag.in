@@ -1,0 +1,23 @@
+.\" $OpenBSD: tag.in,v 1.2 2020/04/02 14:55:29 schwarze Exp $
+.Dd $Mdocdate: April 2 2020 $
+.Dt EM-TAG 1
+.Os
+.Sh NAME
+.Nm Em-tag
+.Nd tagging of emphasis macros
+.Sh DESCRIPTION
+BEGINTEST
+.Bl -tag -width Ds
+.It Em one | two
+text
+.It Xo
+.Em three-with-hyphens
+.Xc
+text
+.El
+.Em four
+.Em one
+.Tg explicit
+.Em five
+.Pp
+ENDTEST

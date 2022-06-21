@@ -1,7 +1,5 @@
 TBL-MOD-EXPAND(1)           General Commands Manual          TBL-MOD-EXPAND(1)
 
-
-
 NNAAMMEE
        tbl-mod-expand - expand modifier in table layout
 
@@ -97,8 +95,6 @@ DDEESSCCRRIIPPTTIIOONN
        x    x    x   x    x    123456789012345678901234567890123456789012    x
 
        leaked tab settings:
-       a b    c   d    e    f                                            g    h
-
-
+       a    b    c    d    e    f    g    h
 
 OpenBSD                        January 27, 2015              TBL-MOD-EXPAND(1)
