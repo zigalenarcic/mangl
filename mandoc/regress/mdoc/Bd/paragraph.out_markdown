@@ -25,10 +25,10 @@ to normal
 another
 paragraph
 
-	unfilled
+	unfilled literal
 	display
 
-	unfilled
+	unfilled literal
 	paragraph
 
 again back
@@ -36,4 +36,4 @@ to normal
 ENDTEST  
 end of file
 
-OpenBSD - January 7, 2019
+OpenBSD - April 19, 2020

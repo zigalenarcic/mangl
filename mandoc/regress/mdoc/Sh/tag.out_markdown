@@ -1,0 +1,43 @@
+SH-TAG(1) - General Commands Manual
+
+# NAME
+
+**Sh-tag** - tagging section headers
+
+# DESCRIPTION
+
+Text in the description.
+
+## Subsection
+
+BEGINTEST
+
+Text in the subsection.
+
+# DESCRIPTION
+
+Text in duplicate description section.
+
+# EXAMPLES
+
+Text introducing examples.
+
+## Subsection
+
+Example text.
+
+## Sub-section
+
+More example text.
+
+# 	 WEIRD SECTION	 
+
+Text in weird section.
+
+# &#160;
+
+Text in section with empty header.
+
+ENDTEST
+
+OpenBSD - April 2, 2020

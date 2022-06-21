@@ -1,0 +1,18 @@
+.\" $OpenBSD: column.in,v 1.2 2020/04/07 22:45:38 schwarze Exp $
+.Dd $Mdocdate: April 7 2020 $
+.Dt TG-COLUMN 1
+.Os
+.Sh NAME
+.Nm Tg-column
+.Nd explicit tagging of column lists and rows
+.Sh DESCRIPTION
+BEGINTEST
+.Tg list
+.Bl -column one two
+.It one Ta
+.Tg row1
+two
+.Tg row2
+.It 1	2
+.El
+ENDTEST

@@ -1,4 +1,3 @@
-BEGINTEST
 &#xFFFD;&#xFFFD;	&lt;control&gt; NULL
 &#xFFFD;&#xFFFD;	&lt;control&gt; START OF HEADING
 &#xFFFD;&#xFFFD;	&lt;control&gt; BELL
@@ -18,6 +17,10 @@ BEGINTEST
 &#xFFFD;&#xFFFD;	&lt;control&gt; APPLICATION PROGRAM COMMAND
 &#x226A;&#x226A;	MUCH LESS-THAN
 &#x226B;&#x226B;	MUCH GREATER-THAN
+&#xD7FB;	HANGUL JONGSEONG PHIEUPH-THIEUTH
+&#xE000;	&lt;Private Use, First&gt;
+&#xF8FF;	&lt;Private Use, Last&gt;
+&#xF900;	CJK COMPATIBILITY IDEOGRAPH-F900
 &#xFB00;&#xFB00;	LATIN SMALL LIGATURE FF
 &#xFB01;&#xFB01;	LATIN SMALL LIGATURE FI
 &#xFB02;&#xFB02;	LATIN SMALL LIGATURE FL
@@ -27,6 +30,10 @@ BEGINTEST
 &#xFFFE;	&lt;undefined&gt;
 &#xFFFF;	&lt;undefined&gt;
 &#x10000;	LINEAR B SYLLABLE B008 A
+&#xE01EF;	VARIATION SELECTOR-256
+&#xEFFFE;	&lt;undefined&gt;
+&#xEFFFF;	&lt;undefined&gt;
+&#xF0000;	&lt;Plane 15 Private Use, First&gt;
 &#xFFFFD;	&lt;Plane 15 Private Use, Last&gt;
 &#xFFFFE;	&lt;undefined&gt;
 &#xFFFFF;	&lt;undefined&gt;
@@ -34,4 +41,3 @@ BEGINTEST
 &#x10FFFD;	&lt;Plane 16 Private Use, Last&gt;
 &#x10FFFE;	&lt;undefined&gt;
 &#x10FFFF;	&lt;undefined&gt;
-ENDTEST

@@ -1,0 +1,35 @@
+CM-TAG(1) - General Commands Manual
+
+# NAME
+
+**Cm-tag** - tagging of command modifier macros
+
+# DESCRIPTION
+
+BEGINTEST
+
+**one** | **two**
+
+> text
+
+**three**
+
+> text
+
+**-hyphen**
+
+> text
+
+**&#45;minus&#45;sign**
+
+> text
+
+**&#92;backslash**
+
+> text
+
+**four**
+
+ENDTEST
+
+OpenBSD - March 21, 2020

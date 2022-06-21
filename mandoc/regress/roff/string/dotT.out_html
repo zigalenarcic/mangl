@@ -1,5 +1,4 @@
-BEGINTEST
-<p class="Pp">We are using the html device.</p>
-<p class="Pp">The device name can be overridden.</p>
-<pre>
-ENDTEST
+<p class="Pp">We are using the html device. It can also be written as the html
+    device.</p>
+<p class="Pp">The device name can be overridden. Both escape forms work for the
+    name.</p>

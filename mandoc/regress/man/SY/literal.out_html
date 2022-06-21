@@ -1,6 +1,5 @@
-BEGINTEST
-<br/>
-initial regular text
+  <br/>
+  initial regular text</p>
 <table class="Nm">
   <tr>
     <td><code class="Nm">command</code></td>
@@ -8,24 +7,17 @@ initial regular text
   </tr>
 </table>
 middle regular text
-<pre>
-literal text
-before display
-</pre>
+<pre>literal text
+before display</pre>
 <table class="Nm">
   <tr>
     <td><code class="Nm">command</code></td>
     <td>
-    <pre>
-<i>arguments</i>
-    </pre>
+    <pre><i>arguments</i></pre>
     </td>
   </tr>
 </table>
-<pre>
-literal text
-after display
-</pre>
-final regular text
-<br/>
-ENDTEST
+<pre>literal text
+after display</pre>
+<p class="Pp">final regular text
+  <br/>

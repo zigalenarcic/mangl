@@ -1,7 +1,5 @@
 CHAR-UNICODE-NOGROFF(1)     General Commands Manual    CHAR-UNICODE-NOGROFF(1)
 
-
-
 NNAAMMEE
        char-unicode-nogroff - characters handled differently by groff
 
@@ -26,6 +24,10 @@ DDEESSCCRRIIPPTTIIOONN
        <9F><9F>  <control> APPLICATION PROGRAM COMMAND
        <<<< MUCH LESS-THAN
        >>>> MUCH GREATER-THAN
+       <?>  HANGUL JONGSEONG PHIEUPH-THIEUTH
+       <?>  <Private Use, First>
+       <?>  <Private Use, Last>
+       <?>  CJK COMPATIBILITY IDEOGRAPH-F900
        ffff LATIN SMALL LIGATURE FF
        fifi LATIN SMALL LIGATURE FI
        flfl LATIN SMALL LIGATURE FL
@@ -35,6 +37,10 @@ DDEESSCCRRIIPPTTIIOONN
        <?>  <undefined>
        <?>  <undefined>
        <?>  LINEAR B SYLLABLE B008 A
+       <?>  VARIATION SELECTOR-256
+       <?>  <undefined>
+       <?>  <undefined>
+       <?>  <Plane 15 Private Use, First>
        <?>  <Plane 15 Private Use, Last>
        <?>  <undefined>
        <?>  <undefined>
@@ -44,6 +50,4 @@ DDEESSCCRRIIPPTTIIOONN
        <?>  <undefined>
        ENDTEST
 
-
-
-OpenBSD                        October 28, 2014        CHAR-UNICODE-NOGROFF(1)
+OpenBSD                          June 2, 2021          CHAR-UNICODE-NOGROFF(1)

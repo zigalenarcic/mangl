@@ -1,6 +1,6 @@
-.\"	$Id: regress.pl.1,v 1.4 2019/03/06 15:58:11 schwarze Exp $
+.\"	$Id: regress.pl.1,v 1.5 2020/03/13 15:32:31 schwarze Exp $
 .\"
-.\" Copyright (c) 2017 Ingo Schwarze <schwarze@openbsd.org>
+.\" Copyright (c) 2017, 2019, 2020 Ingo Schwarze <schwarze@openbsd.org>
 .\"
 .\" Permission to use, copy, modify, and distribute this software for any
 .\" purpose with or without fee is hereby granted, provided that the above
@@ -14,7 +14,7 @@
 .\" ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 .\" OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 .\"
-.Dd $Mdocdate: March 6 2019 $
+.Dd $Mdocdate: March 13 2020 $
 .Dt REGRESS.PL 1
 .Os
 .Sh NAME
@@ -78,6 +78,8 @@ output mode.
 Run subtests for
 .Fl T Cm markdown
 output mode.
+.It Cm tag
+Run subtests for automatic and manual tagging.
 .It Cm utf8
 Run subtests for
 .Fl T Cm utf8
@@ -146,15 +148,6 @@ subdirectory of the regression suite is not included.
 It uses a Makefile structure that differs vastly from the
 rest of the suite.
 .Sh BUGS
-On Oracle Solaris 11,
-.Xr diff 1
-does not support the
-.Fl a
-option.
-Delete that option from the following line in this script:
-.Pp
-.Dl my @diff = qw(diff -au);
-.Pp
 The C library function
 .Xr wcwidth 3
 is known to be buggy on Solaris, which may cause failures in the

@@ -1,4 +1,4 @@
-/*	$Id: mansearch.c,v 1.81 2019/04/30 18:51:57 schwarze Exp $ */
+/*	$Id: mansearch.c,v 1.82 2019/07/01 22:56:24 schwarze Exp $ */
 /*
  * Copyright (c) 2012 Kristaps Dzonsons <kristaps@bsd.lv>
  * Copyright (c) 2013-2018 Ingo Schwarze <schwarze@openbsd.org>
@@ -191,7 +191,7 @@ mansearch(const struct mansearch *search,
 			    mpage->file, R_OK) == -1) {
 				warn("%s", mpage->file);
 				warnx("outdated mandoc.db contains "
-				    "bogus %s entry, run makewhatis %s", 
+				    "bogus %s entry, run makewhatis %s",
 				    page->file + 1, paths->paths[i]);
 				free(mpage->file);
 				free(rp);

@@ -1,0 +1,13 @@
+.\" $OpenBSD$
+.TH TBL-LAYOUT-SPACING 1 "September 1, 2020"
+.SH NAME
+tbl-layout-spacing-nogroff \- excessive spacing modifier
+.SH DESCRIPTION
+initial text
+.TS
+box tab(:);
+R 10 L.
+a:b
+.TE
+.sp
+final text

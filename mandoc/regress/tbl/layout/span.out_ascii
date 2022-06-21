@@ -1,7 +1,5 @@
 TBL-LAYOUT-SPAN(1)          General Commands Manual         TBL-LAYOUT-SPAN(1)
 
-
-
 NNAAMMEE
        tbl-layout-span - alignment of spanned cells
 
@@ -36,9 +34,15 @@ DDEESSCCRRIIPPTTIIOONN
        +--+---+---+---+---+
        |a | b | c | d | e |
        +--+---+---+---+---+
+
+       +----------+
+       |x***nnnnn |
+       +--+-------+
+       |a |  0.01 |
+       +--+-------+
+       |b | 10.0  |
+       +--+-------+
        leaked tab settings:
-       a b   c   d   e   f
+       a    b    c    d    e    f
 
-
-
-OpenBSD                          June 17, 2017              TBL-LAYOUT-SPAN(1)
+OpenBSD                        September 7, 2021            TBL-LAYOUT-SPAN(1)

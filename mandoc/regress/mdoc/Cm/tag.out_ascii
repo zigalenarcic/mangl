@@ -1,0 +1,26 @@
+CM-TAG(1)                   General Commands Manual                  CM-TAG(1)
+
+NNAAMMEE
+     CCmm--ttaagg - tagging of command modifier macros
+
+DDEESSCCRRIIPPTTIIOONN
+     BEGINTEST
+
+     oonnee | ttwwoo
+             text
+
+     tthhrreeee   text
+
+     --hhyypphheenn
+             text
+
+     --mmiinnuuss--ssiiggnn
+             text
+
+     \\bbaacckkssllaasshh
+             text
+     ffoouurr
+
+     ENDTEST
+
+OpenBSD                         March 21, 2020                         OpenBSD

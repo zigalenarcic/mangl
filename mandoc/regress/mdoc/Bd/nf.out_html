@@ -1,22 +1,14 @@
-BEGINTEST initial text
-<pre>
-after .nf
-request
-</pre>
-after .fi request
+<pre>after .nf
+request</pre>
+<p class="Pp">after .fi request</p>
 <div class="Bd Pp">
-<pre>
-in unfilled
-block
-</pre>
+<pre>in unfilled
+block</pre>
 after .fi request in unfilled block</div>
 after end of unfilled block
 <div class="Bd Pp">in filled block
-<pre>
-after .nf request
-in filled block
-</pre>
+<pre>after .nf request
+in filled block</pre>
 </div>
 after end of filled block
 <br/>
-ENDTEST
