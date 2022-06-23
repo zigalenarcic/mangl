@@ -10,6 +10,6 @@ mangl changelog
 * change windowing library from FreeGLUT to GLFW (suport for Wayland)
 * add smartcase search - if only lowercase characters are used, search case-insensitive
 
-## 1.0.0
+## 1.0.0 2019-11-24
 * initial implementation
 
