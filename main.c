@@ -18,6 +18,7 @@
 #include <math.h>
 #include <sys/stat.h>
 #include <glob.h>
+#include <getopt.h>
 #include <err.h>
 #include <stdbool.h>
 #include <ctype.h>
@@ -46,6 +47,15 @@
 #define ZMALLOC(type, n) ((type *)calloc(n, sizeof(type)))
 #define MAX(x,y) (((x) > (y)) ? (x) : (y))
 #define MIN(x,y) (((x) < (y)) ? (x) : (y))
+
+static const struct option longopts[] =
+{
+    {"no-fork",         no_argument,    NULL,   'f'},
+    {"help",            no_argument,    NULL,   'h'},
+    {"local-file",      no_argument,    NULL,   'l'},
+    {"version",         no_argument,    NULL,   'V'},
+    {NULL,              0,              NULL,   0},
+};
 
 enum DISPLAY_MODES {
     D_MANPAGE = 0,
@@ -518,9 +528,9 @@ void print_usage(const char *exe)
     fprintf(stderr, "Display the manpage PAGE in section SECTION in a graphical application\n");
     fprintf(stderr, "or open the application with the search screen.\n");
     fprintf(stderr, "\n");
-    fprintf(stderr, "  --no-fork                 don't fork the GUI\n");
+    fprintf(stderr, "  -f, --no-fork             don't fork the GUI\n");
     fprintf(stderr, "  -h, --help                print usage\n");
-    fprintf(stderr, "  --version                 print version and quit\n");
+    fprintf(stderr, "  -V, --version             print version and quit\n");
     fprintf(stderr, "  -l, --local-file          interpret the PAGE argument as a local filename\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "Report bugs to ziga.lenarcic@gmail.com.\n");
@@ -3208,6 +3218,7 @@ int main(int argc, char *argv[])
     const char *filename = NULL;
     int no_fork = 0;
     int local_file = 0;
+    int ch;
 
     manpage_database = hashmap_new();
     manpage_database_pwd = hashmap_new();
@@ -3218,52 +3229,42 @@ int main(int argc, char *argv[])
     const char *first_arg = NULL;
     const char *second_arg = NULL;
 
-    for (int i_arg = 1; i_arg < argc; i_arg++)
+    while ((ch = getopt_long(argc, argv, "fhlV", longopts, NULL)) != -1)
     {
-        if (argv[i_arg][0] == '-')
+        switch (ch)
         {
-            if (strcmp(argv[i_arg], "--version") == 0)
-            {
-                printf("mangl %d.%d.%d\n", MANGL_VERSION_MAJOR, MANGL_VERSION_MINOR, MANGL_VERSION_PATCH);
-                exit(EXIT_SUCCESS);
-            }
-            else if (strcmp(argv[i_arg], "--no-fork") == 0)
-            {
+            case 'f':
                 no_fork = 1;
-            }
-            else if ((strcmp(argv[i_arg], "-h") == 0) || (strcmp(argv[i_arg], "--help") == 0))
-            {
+                break;
+            case 'h':
                 print_usage(argv[0]);
                 exit(EXIT_SUCCESS);
-            }
-            else if ((strcmp(argv[i_arg], "-l") == 0) || (strcmp(argv[i_arg], "--local-file") == 0))
-            {
+            case 'l':
                 local_file = 1;
-            }
-            else
-            {
-                fprintf(stderr, "mangl: unknown argument '%s'\n", argv[i_arg]);
+                break;
+            case 'V':
+                printf("mangl %d.%d.%d\n", MANGL_VERSION_MAJOR, MANGL_VERSION_MINOR, MANGL_VERSION_PATCH);
+                exit(EXIT_SUCCESS);
+            default:
                 fprintf(stderr, "Try 'mangl --help' for more information.\n");
                 exit(EXIT_FAILURE);
-            }
         }
-        else
-        {
-            if (first_arg && second_arg)
-            {
-                fprintf(stderr, "mangl: unexpected argument '%s'\n", argv[i_arg]);
-                fprintf(stderr, "Try 'mangl --help' for more information.\n");
-                exit(EXIT_FAILURE);
-            }
-            else if (first_arg)
-            {
-                second_arg = argv[i_arg];
-            }
-            else
-            {
-                first_arg = argv[i_arg];
-            }
-        }
+    }
+    argc -= optind;
+    argv += optind;
+
+    if (argc == 1)
+        first_arg = argv[0];
+    else if (argc == 2)
+    {
+        first_arg = argv[0];
+        second_arg = argv[1];
+    }
+    else if (argc > 2)
+    {
+        fprintf(stderr, "mangl: unexpected argument '%s'\n", argv[2]);
+        fprintf(stderr, "Try 'mangl --help' for more information.\n");
+        exit(EXIT_FAILURE);
     }
 
     if (local_file == 1)
