@@ -1890,6 +1890,11 @@ void set_scroll_position(int new_scroll_position)
     }
 }
 
+void scroll_page(double amount)
+{
+    set_scroll_position(page->scroll_position + amount * (window_height - get_line_advance()));
+}
+
 recti to_document_coordinates(recti r)
 {
     r.x += get_dimension(DIM_DOCUMENT_MARGIN);
@@ -2312,6 +2317,18 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                             post_redisplay();
                         }
                         break;
+                    case GLFW_KEY_V: /* ctrl-v alt-v */
+                        if (mods & GLFW_MOD_ALT)
+                        {
+                            /* page up */
+                            scroll_page(-1);
+                        }
+                        else if (mods & GLFW_MOD_CONTROL)
+                        {
+                            /* page down */
+                            scroll_page(1);
+                        }
+                        break;
                     case GLFW_KEY_ENTER:
                     case GLFW_KEY_KP_ENTER:
                         /* clear search */
@@ -2328,10 +2345,10 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                         set_scroll_position(page->scroll_position + get_dimension(DIM_SCROLL_AMOUNT));
                         break;
                     case GLFW_KEY_PAGE_UP:
-                        set_scroll_position(page->scroll_position - (window_height - get_line_advance()));
+                        scroll_page(-1);
                         break;
                     case GLFW_KEY_PAGE_DOWN:
-                        set_scroll_position(page->scroll_position + window_height - get_line_advance());
+                        scroll_page(1);
                         break;
                     case GLFW_KEY_HOME:
                         set_scroll_position(0);
@@ -2342,9 +2359,9 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                     case GLFW_KEY_SPACE:
                         {
                             if (mods & GLFW_MOD_SHIFT)
-                                set_scroll_position(page->scroll_position - (window_height - get_line_advance()));
+                                scroll_page(-1);
                             else
-                                set_scroll_position(page->scroll_position + window_height - get_line_advance());
+                                scroll_page(1);
                         }
                         break;
                     default:
