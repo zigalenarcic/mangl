@@ -61,9 +61,14 @@ mangl: $(COMPAT_OBJS) $(LIBMANDOC_OBJS) $(MANGL_SOURCES)
 sanitizer: CFLAGS += -fsanitize=address
 sanitizer: mangl
 
+MANDIR=/usr/local/share/man
+
 .PHONY: install
 install: mangl
 	cp mangl /usr/local/bin/
+	mkdir -p ${MANDIR}/man1
+	cp mangl.1 ${MANDIR}/man1/
+	chmod 644 ${MANDIR}/man1/mangl.1
 
 .PHONY: clean
 clean:
