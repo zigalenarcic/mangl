@@ -2243,6 +2243,8 @@ void mouse_scroll_func(GLFWwindow *window, double xoffset, double yoffset)
 
 void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
+    const char *k;
+
     if (action == GLFW_RELEASE) /* ignore key up */
         return;
 
@@ -2253,15 +2255,6 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
             {
                 switch (key)
                 {
-                    case GLFW_KEY_C: /* ctrl-c */
-                    case GLFW_KEY_D: /* ctrl-d */
-                        if (mods & GLFW_MOD_CONTROL)
-                        {
-                            page->search_input_active = 0;
-                            set_scroll_position(page->search_start_scroll_position);
-                            post_redisplay();
-                        }
-                        break;
                     case GLFW_KEY_ESCAPE: /* escape */
                         page->search_input_active = 0;
                         set_scroll_position(page->search_start_scroll_position);
@@ -2289,7 +2282,19 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                         }
                         break;
                     default:
-                        break;
+                        k = glfwGetKeyName(key, scancode);
+                        if (k == NULL)
+                            break;
+
+                        if (!strcmp(k, "c") || !strcmp(k, "d"))
+                        {
+                            if (mods & GLFW_MOD_CONTROL)
+                            {
+                                page->search_input_active = 0;
+                                set_scroll_position(page->search_start_scroll_position);
+                                post_redisplay();
+                            }
+                        }
                 }
 
                 return;
@@ -2298,36 +2303,9 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
             {
                 switch (key)
                 {
-                    case GLFW_KEY_C: /* ctrl-c */
-                    case GLFW_KEY_D: /* ctrl-d */
-                        if (mods & GLFW_MOD_CONTROL)
-                        {
-                            exit_program(EXIT_SUCCESS);
-                        }
-                        break;
                     case GLFW_KEY_BACKSPACE:
                     case GLFW_KEY_ESCAPE: /* escape */
                         page_back();
-                        break;
-                    case GLFW_KEY_F: /* ctrl-f */
-                        if (mods & GLFW_MOD_CONTROL)
-                        {
-                            display_mode = D_SEARCH;
-                            update_window_title();
-                            post_redisplay();
-                        }
-                        break;
-                    case GLFW_KEY_V: /* ctrl-v alt-v */
-                        if (mods & GLFW_MOD_ALT)
-                        {
-                            /* page up */
-                            scroll_page(-1);
-                        }
-                        else if (mods & GLFW_MOD_CONTROL)
-                        {
-                            /* page down */
-                            scroll_page(1);
-                        }
                         break;
                     case GLFW_KEY_ENTER:
                     case GLFW_KEY_KP_ENTER:
@@ -2365,6 +2343,35 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                         }
                         break;
                     default:
+                        k = glfwGetKeyName(key, scancode);
+                        if (k == NULL)
+                            break;
+
+                        if (!strcmp(k, "c") || !strcmp(k, "d"))
+                        {
+                            if (mods & GLFW_MOD_CONTROL)
+                                exit_program(EXIT_SUCCESS);
+                        }
+                        else if (!strcmp(k, "f") && mods & GLFW_MOD_CONTROL)
+                        {
+                            display_mode = D_SEARCH;
+                            update_window_title();
+                            post_redisplay();
+                        }
+                        else if (!strcmp(k, "v"))
+                        {
+                            if (mods & GLFW_MOD_ALT)
+                            {
+                                /* page up */
+                                scroll_page(-1);
+                            }
+                            else if (mods & GLFW_MOD_CONTROL)
+                            {
+                                /* page down */
+                                scroll_page(1);
+                            }
+                        }
+
                         break;
                 }
             }
