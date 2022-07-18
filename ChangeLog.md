@@ -2,6 +2,11 @@
 
 mangl changelog
 
+## 1.1.2 2022-07-18
+* better `make install` (by [@omar-polo](https://github.com/omar-polo))
+* correct behavior of key commands on non-QWERTY keyboard layouts (by [@omar-polo](https://github.com/omar-polo))
+* additional key commands: Ctrl-v and Alt-v (by [@omar-polo](https://github.com/omar-polo))
+
 ## 1.1.1 2022-06-22
 * update mandoc library to the latest snapshot: mandoc-1.14.6 (by [@omar-polo](https://github.com/omar-polo))
 * building improvements (configure script etc.) (by [@omar-polo](https://github.com/omar-polo))
