@@ -22,7 +22,12 @@
 #include <err.h>
 #include <stdbool.h>
 #include <ctype.h>
+#ifndef __APPLE__
 #include <GL/gl.h>
+#endif
+#ifdef __APPLE__
+#include <OpenGL/gl.h>
+#endif
 #include <GLFW/glfw3.h>
 
 #include "ft2build.h"
