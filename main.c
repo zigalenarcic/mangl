@@ -62,6 +62,13 @@ static const struct option longopts[] =
     {NULL,              0,              NULL,   0},
 };
 
+static const char * const default_man_paths[] = {
+    "/usr/share/man",
+    "/usr/X11R6/man",
+    "/usr/local/man"
+};
+
+
 enum DISPLAY_MODES {
     D_MANPAGE = 0,
     D_SEARCH = 1
@@ -2639,20 +2646,24 @@ found:
     return 0;
 }
 
+static int get_man_paths(const char * const *paths[])
+{
+    *paths = default_man_paths;
+    return ARRAY_SIZE(default_man_paths);
+}
+
 static int search_filesystem(const char *section, const char *search_term, char *filename_out)
 {
     const char * const sections[] = {"1", "8", "6", "2", "3", "5", "7", "4", "9", "3p"};
 
-    const char * const paths[] =
-    {
-        "/usr/share/man",
-        "/usr/X11R6/man",
-        "/usr/local/man"
-    };
+    const char * const *paths;
+    size_t number_of_paths;
 
     size_t ipath, isec;
 
-    for (ipath = 0; ipath < ARRAY_SIZE(paths); ipath++)
+    number_of_paths = get_man_paths(&paths);
+
+    for (ipath = 0; ipath < number_of_paths; ipath++)
     {
         if (section)
         {
