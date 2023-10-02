@@ -35,6 +35,7 @@
 
 #include "stretchy_buffer.h"
 #include "hashmap.h"
+#include "manpath.h"
 
 #include "mandoc/mandoc.h"
 #include "mandoc/roff.h"
@@ -2646,8 +2647,21 @@ found:
     return 0;
 }
 
-static int get_man_paths(const char * const *paths[])
+/**
+ * Get paths to man pages from system configuration or falls back to
+ * default hard coded values.
+ *
+ * Note: Pass the array of path strings as a reference.
+ */
+static size_t get_man_paths(const char * const *paths[])
 {
+    size_t number_of_paths;
+
+    number_of_paths = get_man_paths_from_manpath_executable(paths);
+    if(number_of_paths)
+        return number_of_paths;
+
+    // fallback onto default
     *paths = default_man_paths;
     return ARRAY_SIZE(default_man_paths);
 }
@@ -2751,16 +2765,13 @@ static int make_manpage_database(void)
 {
     const char * const sections[] = {"1", "8", "6", "2", "3", "5", "7", "4", "9", "3p"};
 
-    const char * const paths[] =
-    {
-        "/usr/share/man",
-        "/usr/X11R6/man",
-        "/usr/local/man"
-    };
+    const char * const *paths;
 
-    size_t ipath, isec;
+    size_t ipath, isec, number_of_paths;
 
-    for (ipath = 0; ipath < ARRAY_SIZE(paths); ipath++)
+    number_of_paths = get_man_paths(&paths);
+
+    for (ipath = 0; ipath < number_of_paths; ipath++)
     {
         for (isec = 0; isec < ARRAY_SIZE(sections); isec++)
         {
