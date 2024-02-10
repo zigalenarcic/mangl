@@ -1684,6 +1684,11 @@ void update_search(void)
     }
 }
 
+int get_left_margin()
+{
+    return (window_width > fitting_window_width()) ? (window_width - fitting_window_width()) / 2 : 0;
+}
+
 void render(void)
 {
     glClearColor(color_table[COLOR_INDEX_BACKGROUND][0], color_table[COLOR_INDEX_BACKGROUND][1], color_table[COLOR_INDEX_BACKGROUND][2], 1.0);
@@ -1699,6 +1704,12 @@ void render(void)
     {
         case D_MANPAGE:
             {
+                /* draw manpage (text etc.) centered if window wider than necessary */
+                glPushMatrix();
+                int left_margin = get_left_margin();
+                if (left_margin > 0)
+                    glTranslatef(left_margin, 0.0f, 0.0f);
+
                 /* draw document border */
                 int border_margin = get_dimension(DIM_DOCUMENT_MARGIN) * 3 / 8 + 1;
                 set_color(COLOR_INDEX_GUI_1);
@@ -1754,6 +1765,7 @@ void render(void)
 
                 render_manpage(page);
 
+                glPopMatrix();
                 /* draw the search input if active */
                 if (page->search_input_active)
                 {
@@ -1996,6 +2008,8 @@ void mouse_button_func(GLFWwindow *window, int button, int action, int mods)
     static int clicked_in_link = 0;
     static link_t link;
 
+    int left_margin = get_left_margin();
+
     switch (display_mode)
     {
         case D_MANPAGE:
@@ -2025,7 +2039,7 @@ void mouse_button_func(GLFWwindow *window, int button, int action, int mods)
                         else
                         {
                             // see if a link has been clicked
-                            link_t *l = link_under_cursor(x, y);
+                            link_t *l = link_under_cursor(x - left_margin, y);
                             if (l)
                             {
                                 clicked_in_link = 1;
@@ -2043,7 +2057,7 @@ void mouse_button_func(GLFWwindow *window, int button, int action, int mods)
 
                         if (clicked_in_link)
                         {
-                            link_t *l = link_under_cursor(x, y);
+                            link_t *l = link_under_cursor(x - left_margin, y);
                             if (l && (memcmp(&l->document_rectangle, &link.document_rectangle, sizeof(recti)) == 0)
                                     && (strcmp(l->link, link.link) == 0))
                             {
@@ -2111,6 +2125,7 @@ void mouse_pos_func(GLFWwindow *window, double x_d, double y_d)
     {
         case D_MANPAGE:
             {
+                int left_margin = get_left_margin();
                 if (scrollbar_dragging)
                 {
                     int new_thumb_position = clamp(scrollbar_thumb_mouse_down_thumb_position + y - scrollbar_thumb_mouse_down_y, 0, window_height - scrollbar_thumb_size);
@@ -2144,8 +2159,8 @@ void mouse_pos_func(GLFWwindow *window, double x_d, double y_d)
                     {
                         recti r = p->links[i].document_rectangle;
 
-                        r.x += get_dimension(DIM_DOCUMENT_MARGIN);
-                        r.x2 += get_dimension(DIM_DOCUMENT_MARGIN);
+                        r.x += get_dimension(DIM_DOCUMENT_MARGIN) + left_margin;
+                        r.x2 += get_dimension(DIM_DOCUMENT_MARGIN) + left_margin;
                         r.y += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
                         r.y2 += get_dimension(DIM_DOCUMENT_MARGIN) - page->scroll_position;
 
