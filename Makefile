@@ -1,6 +1,6 @@
 include mandoc/Makefile.local
 
-CFLAGS = -g -O2 -Wall $(shell pkg-config --cflags zlib gl freetype2 glfw3)
+CFLAGS = -g -O2 -Wall -Wno-maybe-uninitialized $(shell pkg-config --cflags zlib gl freetype2 glfw3)
 LDFLAGS = -lm $(shell pkg-config --libs zlib gl freetype2 glfw3) ${LDADD}
 
 LIBMAN_OBJS	 = mandoc/man.o \
