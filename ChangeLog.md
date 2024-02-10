@@ -2,6 +2,11 @@
 
 mangl changelog
 
+## 1.1.3 2024-02-10
+* use Apple `gl.h` on macOS (by [@forivall](https://github.com/forivall))
+* man pages paths determined by executing `manpath` (by [@christian-burger](https://github.com/christian-burger))
+* center text when window width exceeds the required width
+
 ## 1.1.2 2022-07-18
 * better `make install` (by [@omar-polo](https://github.com/omar-polo))
 * correct behavior of key commands on non-QWERTY keyboard layouts (by [@omar-polo](https://github.com/omar-polo))
