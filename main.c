@@ -3457,7 +3457,8 @@ int main(int argc, char *argv[])
 
     glfwMakeContextCurrent(window);
 
-    glfwSetWindowSizeCallback(window, &window_size_func);
+    // For fractional scaling purposes *window size* and *framebuffer size* are different.
+    glfwSetFramebufferSizeCallback(window, window_size_func);
     glfwSetWindowRefreshCallback(window, &window_refresh_func);
 
     glfwSetMouseButtonCallback(window, &mouse_button_func);
@@ -3469,9 +3470,13 @@ int main(int argc, char *argv[])
 
     upload_font_textures();
 
+    // Hacky but required in the case of fractional scaling since for
+    // whatever reason the scale isn't known until the first buffer swap.
+    glfwSwapBuffers(window);
+
     int w = 0;
     int h = 0;
-    glfwGetWindowSize(window, &w, &h);
+    glfwGetFramebufferSize(window, &w, &h);
     window_size_func(window, w, h);
     redisplay_needed = true;
 
