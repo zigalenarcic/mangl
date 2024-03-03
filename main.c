@@ -1217,7 +1217,7 @@ void window_refresh_func(GLFWwindow *window)
     redisplay_needed = true;
 }
 
-void window_size_func(GLFWwindow *window, int w, int h)
+void framebuffer_size_func(GLFWwindow *window, int w, int h)
 {
     window_width = w;
     window_height = h;
@@ -3458,7 +3458,7 @@ int main(int argc, char *argv[])
     glfwMakeContextCurrent(window);
 
     // For fractional scaling purposes *window size* and *framebuffer size* are different.
-    glfwSetFramebufferSizeCallback(window, window_size_func);
+    glfwSetFramebufferSizeCallback(window, framebuffer_size_func);
     glfwSetWindowRefreshCallback(window, &window_refresh_func);
 
     glfwSetMouseButtonCallback(window, &mouse_button_func);
@@ -3477,7 +3477,7 @@ int main(int argc, char *argv[])
     int w = 0;
     int h = 0;
     glfwGetFramebufferSize(window, &w, &h);
-    window_size_func(window, w, h);
+    framebuffer_size_func(window, w, h);
     redisplay_needed = true;
 
     while (!glfwWindowShouldClose(window))
