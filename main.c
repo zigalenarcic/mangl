@@ -600,7 +600,13 @@ struct manpage
 struct manpage *page;
 struct manpage *formatting_page; // used when formatting page
 
-struct manpage **page_stack;
+struct page_description {
+    char filename[256];
+    char pwd[256];
+    struct manpage *ptr;
+};
+
+struct page_description *page_stack;
 size_t stack_pos; // index of displayed page + 1
 
 void open_new_page(const char *filename, const char *pwd);
@@ -951,6 +957,12 @@ int get_character_width(void)
 int document_width(void)
 {
     return 2 * get_dimension(DIM_DOCUMENT_MARGIN) + ((settings.line_length + 2) * get_character_width());
+}
+
+int line_length_from_window_width(int window_width)
+{
+    return (window_width - 2 * get_dimension(DIM_DOCUMENT_MARGIN) - get_dimension(DIM_SCROLLBAR_WIDTH)) /
+        get_character_width() - 2;
 }
 
 int document_height(void)
@@ -2270,6 +2282,8 @@ void mouse_scroll_func(GLFWwindow *window, double xoffset, double yoffset)
     }
 }
 
+void reload_current_page(void);
+
 void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
 {
     const char *k;
@@ -2322,6 +2336,19 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                                 page->search_input_active = 0;
                                 set_scroll_position(page->search_start_scroll_position);
                                 post_redisplay();
+                            }
+                        }
+                        else if (!strcmp(k, "v"))
+                        {
+                            if (mods & GLFW_MOD_CONTROL)
+                            {
+                                const char *clipboard = glfwGetClipboardString(window);
+                                if (strlen(clipboard) < 30)
+                                {
+                                    snprintf(page->search_string, sizeof(page->search_string), "%s", clipboard);
+                                    update_page_search(page);
+                                    post_redisplay();
+                                }
                             }
                         }
                 }
@@ -2400,6 +2427,12 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                                 scroll_page(1);
                             }
                         }
+                        else if (!strcmp(k, "="))
+                        {
+                          /* reset line_length to match the current window width */
+                          settings.line_length = line_length_from_window_width(window_width);
+                          reload_current_page();
+                        }
 
                         break;
                 }
@@ -2438,6 +2471,18 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                 case GLFW_KEY_D: /* ctrl-d */
                     if (mods & GLFW_MOD_CONTROL)
                         exit_program(EXIT_SUCCESS);
+                    break;
+                case GLFW_KEY_V: /* ctrl-v */
+                    if (mods & GLFW_MOD_CONTROL)
+                    {
+                      const char *clipboard = glfwGetClipboardString(window);
+                      if (strlen(clipboard) < 30)
+                      {
+                          snprintf(search_term, sizeof(search_term), "%s", clipboard);
+                          update_search();
+                          post_redisplay();
+                      }
+                    }
                     break;
                 case GLFW_KEY_ENTER:
                 case GLFW_KEY_KP_ENTER:
@@ -3017,6 +3062,17 @@ void update_window_title(void)
     }
 }
 
+struct page_description make_page_description(struct manpage *page, const char *filename, const char *pwd)
+{
+    struct page_description page_desc;
+
+    page_desc.ptr = page;
+    snprintf(page_desc.filename, sizeof(page_desc.filename), "%s", filename);
+    snprintf(page_desc.pwd, sizeof(page_desc.pwd), "%s", pwd);
+
+    return page_desc;
+}
+
 void open_new_page(const char *filename, const char *pwd)
 {
     if (page && strlen(page->pwd))
@@ -3030,19 +3086,22 @@ void open_new_page(const char *filename, const char *pwd)
         // additional pages on stack, need NULLing
         for (int i = stack_pos; i < sb_count(page_stack); i++)
         {
-            if (page_stack[i])
+            if (page_stack[i].ptr)
             {
-                free_manpage(page_stack[i]);
-                page_stack[i] = NULL;
+                free_manpage(page_stack[i].ptr);
+                page_stack[i].ptr = NULL;
             }
         }
 
         stack_pos++;
-        page_stack[stack_pos - 1] = new_page;
+        page_stack[stack_pos - 1].ptr = new_page;
+        snprintf(page_stack[stack_pos - 1].filename, sizeof(page_stack[stack_pos - 1].filename), "%s", filename);
+        snprintf(page_stack[stack_pos - 1].pwd, sizeof(page_stack[stack_pos - 1].pwd), "%s", pwd);
     }
     else
     {
-        sb_push(page_stack, new_page);
+        struct page_description page_desc = make_page_description(new_page, filename, pwd);
+        sb_push(page_stack, page_desc);
         stack_pos++;
     }
 
@@ -3054,12 +3113,38 @@ void open_new_page(const char *filename, const char *pwd)
     post_redisplay();
 }
 
+void reload_current_page(void)
+{
+    if (stack_pos < 1)
+        return;
+
+    {
+        const char *filename = page_stack[stack_pos - 1].filename;
+        const char *pwd = page_stack[stack_pos - 1].pwd;
+
+        struct manpage *new_page = load_manpage(filename, pwd);
+        struct manpage *prev_page = page_stack[stack_pos - 1].ptr;
+
+        page_stack[stack_pos - 1].ptr = new_page;
+        page = new_page;
+
+        if (prev_page)
+        {
+            free_manpage(prev_page);
+        }
+
+        update_window_title();
+        update_scrollbar();
+        post_redisplay();
+    }
+}
+
 void page_back(void)
 {
     if (stack_pos > 1)
     {
         stack_pos--;
-        page = page_stack[stack_pos - 1];
+        page = page_stack[stack_pos - 1].ptr;
         update_window_title();
         update_scrollbar();
         post_redisplay();
@@ -3075,10 +3160,10 @@ void page_back(void)
 
 void page_forward(void)
 {
-    if ((stack_pos < sb_count(page_stack)) && page_stack[stack_pos])
+    if ((stack_pos < sb_count(page_stack)) && page_stack[stack_pos].ptr)
     {
         stack_pos++;
-        page = page_stack[stack_pos - 1];
+        page = page_stack[stack_pos - 1].ptr;
         update_window_title();
         update_scrollbar();
         post_redisplay();
@@ -3421,7 +3506,9 @@ int main(int argc, char *argv[])
 
         page = load_manpage(filename, pwd);
 
-        sb_push(page_stack, page);
+        struct page_description page_desc = make_page_description(page, filename, pwd);
+
+        sb_push(page_stack, page_desc);
         stack_pos++;
 
         if (strlen(page->manpage_name) > 0)
