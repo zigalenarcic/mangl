@@ -171,7 +171,8 @@ struct {
     int font_size;
     double gui_scale;
     double line_spacing;
-} settings = { .font_size = 10, .gui_scale = 1.0, .line_spacing = 1.0};
+    int line_length;
+} settings = { .font_size = 10, .gui_scale = 1.0, .line_spacing = 1.0, .line_length = 78};
 
 int display_mode = D_SEARCH;
 char search_term[512];
@@ -949,7 +950,7 @@ int get_character_width(void)
 
 int document_width(void)
 {
-    return 2 * get_dimension(DIM_DOCUMENT_MARGIN) + ((78 + 2) * get_character_width());
+    return 2 * get_dimension(DIM_DOCUMENT_MARGIN) + ((settings.line_length + 2) * get_character_width());
 }
 
 int document_height(void)
@@ -1242,7 +1243,7 @@ void framebuffer_size_func(GLFWwindow *window, int w, int h)
 int fitting_window_width(void)
 {
     return 2 * get_dimension(DIM_DOCUMENT_MARGIN) +
-        ((78 + 2) * get_character_width()) + get_dimension(DIM_SCROLLBAR_WIDTH);
+        ((settings.line_length + 2) * get_character_width()) + get_dimension(DIM_SCROLLBAR_WIDTH);
 }
 
 int fitting_window_height(int num_rows)
@@ -2953,7 +2954,7 @@ struct manpage *load_manpage(const char *filename, const char *pwd)
 
     add_line(page);
 
-    void *formatter = mangl_formatter(78, 5);
+    void *formatter = mangl_formatter(settings.line_length, 5);
     formatting_page = page; // temporary use of a global variable for formatting functions (not multithreaded)
 
     if (meta->macroset == MACROSET_MDOC)
@@ -3232,6 +3233,10 @@ void load_settings(void)
                     {
                         settings.line_spacing = val;
                     }
+                }
+                else if (strcmp(name, "line_length") == 0)
+                {
+                    settings.line_length = atoi(value);
                 }
                 else if (strcmp(name, "initial_window_rows") == 0)
                 {
