@@ -8,7 +8,7 @@
    version="1.1"
    id="svg5"
    inkscape:version="1.1.2 (0a00cf5339, 2022-02-04)"
-   sodipodi:docname="mangl_icon.svg"
+   sodipodi:docname="mangl.svg"
    inkscape:export-filename="/home/ziga/mangl/art/mangl_icon_32.png"
    inkscape:export-xdpi="64"
    inkscape:export-ydpi="64"
@@ -27,13 +27,13 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="10.248373"
-     inkscape:cx="10.245529"
-     inkscape:cy="21.613188"
+     inkscape:zoom="5.1241865"
+     inkscape:cx="0.97576464"
+     inkscape:cy="28.785057"
      inkscape:window-width="1481"
      inkscape:window-height="970"
-     inkscape:window-x="32"
-     inkscape:window-y="115"
+     inkscape:window-x="75"
+     inkscape:window-y="135"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1"
      units="px" />
@@ -96,25 +96,25 @@
        xml:space="preserve"
        style="font-size:3.88056px;line-height:1.25;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke-width:0.264583"
        x="3.1396258"
-       y="5.0070934"
+       y="5.1743627"
        id="text14955"><tspan
          sodipodi:role="line"
          id="tspan14953"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.88056px;font-family:'Noto Mono';-inkscape-font-specification:'Noto Mono';stroke-width:0.264583"
          x="3.1396258"
-         y="5.0070934">man</tspan></text>
+         y="5.1743627">man</tspan></text>
     <g
        aria-label="GL"
        id="text32137"
        style="font-size:4.23333px;line-height:1.25;font-family:FreeMono;-inkscape-font-specification:FreeMono;stroke-width:0.264583"
-       transform="translate(-0.84081299,-0.03215205)">
+       transform="translate(-1.0883225,0.80208386)">
       <path
          d="m 7.072251,8.4016429 0.00207,-0.6688563 -0.6266029,0.013621 0.02709,-0.5229907 h 1.095535 L 7.58341,8.7244635 C 7.4221797,8.8388406 7.4056792,8.9118487 7.211376,8.9711042 7.0170728,9.0289818 6.7016093,9.1233946 6.4811234,9.1233946 5.9988104,9.1233946 5.4890739,8.97743 5.2162226,8.6963104 4.9447493,8.4138129 4.6931753,7.8443282 4.6931753,7.3413447 c 0,-0.5043616 0.1887118,-1.0610465 0.460185,-1.342166 C 5.4262117,5.7166811 5.885658,5.5024821 6.367971,5.5024821 c 0.2011934,0 0.5786757,0.01172 0.7591985,0.061329 0.1819009,0.049609 0.2137075,0.070959 0.3666696,0.1674217 L 7.489728,6.3338956 C 7.3353878,6.2029821 7.1714014,6.2022913 6.9977687,6.1361455 6.824136,6.0699997 6.6415461,6.0369268 6.449999,6.0369268 c -0.3775821,0 -0.6614578,0.1054198 -0.8516269,0.3162595 C 5.409581,6.564026 5.3151855,6.8782184 5.3151855,7.2957637 c 0,0.4161672 0.094396,0.7296706 0.2831866,0.9405103 0.1901691,0.2108397 0.4740448,0.3162595 0.8516269,0.3162595 0.14745,0 0.2790525,-0.012402 0.3948076,-0.037207 0.1157551,-0.026183 0.1351159,-0.05994 0.2274444,-0.1136836 z"
          style="font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#ff2a2a"
          id="path50741"
          sodipodi:nodetypes="cccccccscscscccsscscscc" />
       <path
-         d="m 8.3159346,5.5277789 0.6621231,-0.010119 -0.00695,2.9824958 1.4820293,0.0016 0.0051,0.5268155 -2.1426705,0.016956 z"
+         d="m 8.3159346,5.5277789 0.6621231,-0.010119 -0.00695,2.9824958 1.8728653,0.0016 -0.0011,0.5404934 -2.5273295,0.00328 z"
          style="font-family:sans-serif;-inkscape-font-specification:sans-serif;fill:#ff2a2a"
          id="path50743"
          sodipodi:nodetypes="ccccccc" />

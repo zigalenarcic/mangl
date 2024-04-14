@@ -56,7 +56,7 @@ MANGL_SOURCES = mandoc/tree.c \
 				hashmap.c \
 				main.c
 
-mangl: $(COMPAT_OBJS) $(LIBMANDOC_OBJS) $(MANGL_SOURCES)
+mangl: $(COMPAT_OBJS) $(LIBMANDOC_OBJS) $(MANGL_SOURCES) icon.h
 	$(CC) $(CFLAGS) -o $@ $(COMPAT_OBJS) $(LIBMANDOC_OBJS) $(MANGL_SOURCES) $(LDFLAGS)
 
 sanitizer: CFLAGS += -fsanitize=address

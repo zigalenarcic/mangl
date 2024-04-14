@@ -36,6 +36,7 @@
 #include "stretchy_buffer.h"
 #include "hashmap.h"
 #include "manpath.h"
+#include "icon.h"
 
 #include "mandoc/mandoc.h"
 #include "mandoc/roff.h"
@@ -3555,6 +3556,14 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Failed to create a Window\n");
         glfwTerminate();
         exit(EXIT_FAILURE);
+    }
+
+    {
+      GLFWimage image;
+      image.width = 32;
+      image.height = 32;
+      image.pixels = mangl_icon_32_data;
+      glfwSetWindowIcon(window, 1, &image);
     }
 
     glfwMakeContextCurrent(window);
