@@ -1,0 +1,10 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Terminal=False
+Name=Mangl
+Comment=Graphical man page viewer
+Categories=Utility;Development;
+Exec=/usr/local/bin/mangl
+Icon=/usr/share/icons/hicolor/scalable/apps/mangl.svg

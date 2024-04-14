@@ -68,6 +68,8 @@ install: mangl
 	mkdir -p ${DESTDIR}${MANDIR}/man1
 	${INSTALL_PROGRAM} mangl ${DESTDIR}${BINDIR}
 	${INSTALL_MAN} mangl.1 ${DESTDIR}${MANDIR}/man1/
+	cp art/mangl.svg /usr/share/icons/hicolor/scalable/apps/
+	cp mangl.desktop /usr/share/applications/
 
 .PHONY: clean
 clean:
