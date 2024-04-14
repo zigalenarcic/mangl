@@ -3538,6 +3538,14 @@ int main(int argc, char *argv[])
 
     glfwSetErrorCallback(&glfw_error_callback);
 
+    glfwWindowHintString(GLFW_X11_CLASS_NAME, "mangl");
+    glfwWindowHintString(GLFW_X11_INSTANCE_NAME, "mangl");
+
+#if (GLFW_VERSION_MAJOR > 3) || ((GLFW_VERSION_MAJOR == 3) && (GLFW_VERSION_MINOR >= 4))
+    if (glfwGetPlatform() == GLFW_PLATFORM_WAYLAND)
+        glfwWindowHintString(GLFW_WAYLAND_APP_ID, "mangl");
+#endif
+
     window = glfwCreateWindow(fitting_window_width(), fitting_window_height(initial_window_rows), window_title, NULL, NULL);
 
     if (!window)
