@@ -2411,6 +2411,8 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                         else if (!strcmp(k, "f") && mods & GLFW_MOD_CONTROL)
                         {
                             display_mode = D_SEARCH;
+                            search_term[0] = 0;
+                            update_search();
                             update_window_title();
                             post_redisplay();
                         }
