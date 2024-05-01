@@ -50,6 +50,7 @@ to copy the executable to `/usr/local/bin/` or copy and use the `mangl` binary a
 * to search within a man page: `/` to initiate a search, `escape` to cancel a search, `enter` to commit the search, `n` and `N` to move between search results, search emulates vim's `smartcase` feature (use case sensitive search if the term includes uppercase letters)
 * to go to search screen: `Ctrl-f`
 * to quit: `q`, `Ctrl-c`, `Ctrl-d`
+* to toggle line length to fit the window: `=`
 
 ## ~/.manglrc
 
@@ -61,6 +62,7 @@ font: Anonymous Pro
 font_size: 10
 gui_scale: 1
 line_spacing: 1
+line_length: 78
 initial_window_rows: 40
 color_background: #151515
 color_foreground: #fdfde8
