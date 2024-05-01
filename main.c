@@ -173,7 +173,9 @@ struct {
     double gui_scale;
     double line_spacing;
     int line_length;
-} settings = { .font_size = 10, .gui_scale = 1.0, .line_spacing = 1.0, .line_length = 78};
+    int current_line_length;
+} settings = { .font_size = 10, .gui_scale = 1.0, .line_spacing = 1.0, .line_length = 78,
+  .current_line_length = 78};
 
 int display_mode = D_SEARCH;
 char search_term[512];
@@ -202,6 +204,8 @@ int scrollbar_thumb_mouse_down_y = 0;
 int scrollbar_thumb_mouse_down_thumb_position = 0;
 
 int initial_window_rows = 40;
+
+int line_length_toggle;
 
 GLFWwindow *window;
 
@@ -957,7 +961,7 @@ int get_character_width(void)
 
 int document_width(void)
 {
-    return 2 * get_dimension(DIM_DOCUMENT_MARGIN) + ((settings.line_length + 2) * get_character_width());
+    return 2 * get_dimension(DIM_DOCUMENT_MARGIN) + ((settings.current_line_length + 2) * get_character_width());
 }
 
 int line_length_from_window_width(int window_width)
@@ -1256,7 +1260,7 @@ void framebuffer_size_func(GLFWwindow *window, int w, int h)
 int fitting_window_width(void)
 {
     return 2 * get_dimension(DIM_DOCUMENT_MARGIN) +
-        ((settings.line_length + 2) * get_character_width()) + get_dimension(DIM_SCROLLBAR_WIDTH);
+        ((settings.current_line_length + 2) * get_character_width()) + get_dimension(DIM_SCROLLBAR_WIDTH);
 }
 
 int fitting_window_height(int num_rows)
@@ -2432,8 +2436,12 @@ void key_func(GLFWwindow *window, int key, int scancode, int action, int mods)
                         }
                         else if (!strcmp(k, "="))
                         {
-                          /* reset line_length to match the current window width */
-                          settings.line_length = line_length_from_window_width(window_width);
+                          line_length_toggle = !line_length_toggle;
+
+                          /* toggle between current window width and original line length */
+                          settings.current_line_length = line_length_toggle ?
+                            line_length_from_window_width(window_width) : settings.line_length;
+
                           reload_current_page();
                         }
 
@@ -3002,7 +3010,7 @@ struct manpage *load_manpage(const char *filename, const char *pwd)
 
     add_line(page);
 
-    void *formatter = mangl_formatter(settings.line_length, 5);
+    void *formatter = mangl_formatter(settings.current_line_length, 5);
     formatting_page = page; // temporary use of a global variable for formatting functions (not multithreaded)
 
     if (meta->macroset == MACROSET_MDOC)
@@ -3325,6 +3333,7 @@ void load_settings(void)
                 else if (strcmp(name, "line_length") == 0)
                 {
                     settings.line_length = atoi(value);
+                    settings.current_line_length = settings.line_length;
                 }
                 else if (strcmp(name, "initial_window_rows") == 0)
                 {
