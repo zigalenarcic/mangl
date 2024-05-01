@@ -2,6 +2,14 @@
 
 mangl changelog
 
+## 1.1.4 2024-05-01
+* add an icon and a .desktop file
+* when using Ctrl-F, start with an empty search
+* always set X11 `WM_CLASS` to mangl and set Wayland App ID to mangl when using GLFW 3.4
+* add '=' key command to toggle between best matching line length for the current window width and the original line length (in manpage display only) and add Ctrl-V paste support in the search page and in the document search box
+* add `line_length` setting (default value is 78) which controls max line length in characters
+* fix fractional scaling (by [@minerscale](https://github.com/minerscale))
+
 ## 1.1.3 2024-02-10
 * use Apple `gl.h` on macOS (by [@forivall](https://github.com/forivall))
 * man pages paths determined by executing `manpath` (by [@christian-burger](https://github.com/christian-burger))
