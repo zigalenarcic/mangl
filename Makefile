@@ -66,10 +66,12 @@ sanitizer: mangl
 install: mangl
 	mkdir -p ${DESTDIR}${BINDIR}
 	mkdir -p ${DESTDIR}${MANDIR}/man1
+	mkdir -p ${DESTDIR}/usr/share/icons/hicolor/scalable/apps/
+	mkdir -p ${DESTDIR}/usr/share/applications/
 	${INSTALL_PROGRAM} mangl ${DESTDIR}${BINDIR}
 	${INSTALL_MAN} mangl.1 ${DESTDIR}${MANDIR}/man1/
-	cp art/mangl.svg /usr/share/icons/hicolor/scalable/apps/
-	cp mangl.desktop /usr/share/applications/
+	${INSTALL_DATA} art/mangl.svg ${DESTDIR}/usr/share/icons/hicolor/scalable/apps/mangl.svg
+	${INSTALL_DATA} mangl.desktop ${DESTDIR}/usr/share/applications/mangl.desktop
 
 .PHONY: clean
 clean:
