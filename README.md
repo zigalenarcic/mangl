@@ -18,7 +18,7 @@ Features:
 
 ## Building
 
-Install prerequisites if necessary (pkg-config, zlib, OpenGL, GLFW and FreeType headers and
+Install prerequisites if necessary (pkg-config, zlib, bzip2, OpenGL, GLFW and FreeType headers and
 libraries). On Debian systems run:
 
 ```
