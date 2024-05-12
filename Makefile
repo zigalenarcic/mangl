@@ -1,7 +1,7 @@
 include mandoc/Makefile.local
 
 CFLAGS = -g -O2 -Wall -Wno-maybe-uninitialized $(shell pkg-config --cflags zlib gl freetype2 glfw3)
-LDFLAGS = -lm $(shell pkg-config --libs zlib gl freetype2 glfw3) ${LDADD}
+LDFLAGS = -lm $(shell pkg-config --libs zlib gl freetype2 glfw3) ${LDADD} -lbz2
 
 LIBMAN_OBJS	 = mandoc/man.o \
 			   mandoc/man_macro.o \

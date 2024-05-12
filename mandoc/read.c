@@ -38,6 +38,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <zlib.h>
+#include <bzlib.h>
 
 #include "mandoc_aux.h"
 #include "mandoc.h"
@@ -436,6 +437,7 @@ read_whole_file(struct mparse *curp, int fd, struct buf *fb, int *with_mmap)
 {
 	struct stat	 st;
 	gzFile		 gz;
+	BZFILE		 *bz;
 	size_t		 off;
 	ssize_t		 ssz;
 	int		 gzerrnum, retval;
@@ -477,14 +479,26 @@ read_whole_file(struct mparse *curp, int fd, struct buf *fb, int *with_mmap)
 			    "%s", strerror(errno));
 			return -1;
 		}
+
+		if (curp->gzip == 1)
 		if ((gz = gzdopen(fd, "rb")) == NULL) {
 			mandoc_msg(MANDOCERR_GZDOPEN, 0, 0,
 			    "%s", strerror(errno));
 			close(fd);
 			return -1;
 		}
-	} else
+		if (curp->gzip == 2)
+		if ((bz = BZ2_bzdopen(fd, "rb")) == NULL) {
+			mandoc_msg(MANDOCERR_GZDOPEN, 0, 0, // reuse error code for bzip
+			    "%s", strerror(errno));
+			close(fd);
+			return -1;
+		}
+
+	} else {
 		gz = NULL;
+		bz = NULL;
+	}
 
 	/*
 	 * If this isn't a regular file (like, say, stdin), then we must
@@ -504,29 +518,64 @@ read_whole_file(struct mparse *curp, int fd, struct buf *fb, int *with_mmap)
 			}
 			resize_buf(fb, 65536);
 		}
-		ssz = curp->gzip ?
-		    gzread(gz, fb->buf + (int)off, fb->sz - off) :
-		    read(fd, fb->buf + (int)off, fb->sz - off);
+		if (curp->gzip) {
+			if (curp->gzip == 1) {
+				ssz = gzread(gz, fb->buf + (int)off, fb->sz - off);
+			} else if (curp->gzip == 2) {
+				ssz = BZ2_bzread(bz, fb->buf + (int)off, fb->sz - off);
+			}
+		} else {
+			ssz = read(fd, fb->buf + (int)off, fb->sz - off);
+		}
+
 		if (ssz == 0) {
 			fb->sz = off;
 			retval = 0;
 			break;
 		}
 		if (ssz == -1) {
-			if (curp->gzip)
-				(void)gzerror(gz, &gzerrnum);
-			mandoc_msg(MANDOCERR_READ, 0, 0, "%s",
-			    curp->gzip && gzerrnum != Z_ERRNO ?
-			    zError(gzerrnum) : strerror(errno));
+			const char *zerrmsg = NULL;
+			if (curp->gzip) {
+				if (curp->gzip == 1) {
+					(void)gzerror(gz, &gzerrnum);
+					zerrmsg = (gzerrnum != Z_ERRNO)
+						? zError (gzerrnum)
+						: strerror (errno);
+				} else if (curp->gzip == 2) {
+					zerrmsg = BZ2_bzerror(bz, &gzerrnum);
+					if (gzerrnum == BZ_IO_ERROR) {
+						zerrmsg = strerror(errno);
+					}
+				}
+			}
+			mandoc_msg(MANDOCERR_READ, 0, 0, "%s", zerrmsg);
 			break;
 		}
 		off += (size_t)ssz;
 	}
 
-	if (curp->gzip && (gzerrnum = gzclose(gz)) != Z_OK)
-		mandoc_msg(MANDOCERR_GZCLOSE, 0, 0, "%s",
-		    gzerrnum == Z_ERRNO ? strerror(errno) :
-		    zError(gzerrnum));
+	if (curp->gzip) {
+		if (curp->gzip == 1) {
+			gzerrnum = gzclose(gz);
+			if (gzerrnum != Z_OK) {
+				mandoc_msg(MANDOCERR_GZCLOSE, 0, 0, "%s",
+					   gzerrnum == Z_ERRNO ? strerror(errno) :
+					   zError(gzerrnum));
+			}
+		}
+		else if (curp->gzip == 2) {
+			BZ2_bzclose(bz);
+			const char *zerrmsg = BZ2_bzerror(bz, &gzerrnum);
+			if (gzerrnum != BZ_OK) {
+				if (gzerrnum == BZ_IO_ERROR) {
+					zerrmsg = strerror(errno);
+				}
+				mandoc_msg(MANDOCERR_GZCLOSE, 0, 0, "%s",
+					   zerrmsg);
+			}
+		}
+	}
+
 	if (retval == -1) {
 		free(fb->buf);
 		fb->buf = NULL;
@@ -628,6 +677,9 @@ mparse_open(struct mparse *curp, const char *file)
 
 	cp = strrchr(file, '.');
 	curp->gzip = (cp != NULL && ! strcmp(cp + 1, "gz"));
+	if (!curp->gzip)
+		if (cp != NULL && ! strcmp(cp + 1, "bz2"))
+			curp->gzip = 2;
 
 	/* First try to use the filename as it is. */
 
@@ -647,6 +699,23 @@ mparse_open(struct mparse *curp, const char *file)
 		errno = save_errno;
 		if (fd != -1) {
 			curp->gzip = 1;
+			return fd;
+		}
+	}
+
+	/*
+	 * If that doesn't work and the filename doesn't
+	 * already  end in .bz2, try appending .bz2.
+	 */
+
+	if ( ! curp->gzip) {
+		save_errno = errno;
+		mandoc_asprintf(&cp, "%s.bz2", file);
+		fd = open(cp, O_RDONLY);
+		free(cp);
+		errno = save_errno;
+		if (fd != -1) {
+			curp->gzip = 2;
 			return fd;
 		}
 	}

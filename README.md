@@ -22,7 +22,7 @@ Install prerequisites if necessary (pkg-config, zlib, OpenGL, GLFW and FreeType 
 libraries). On Debian systems run:
 
 ```
-sudo apt install pkg-config libz-dev libgl-dev libglfw3-dev libfreetype6-dev
+sudo apt install pkg-config libz-dev libgl-dev libglfw3-dev libfreetype6-dev libbz2-dev
 ```
 
 Then, run the usual

@@ -2805,6 +2805,11 @@ int get_page_name_and_section(const char *pathname, char *name, size_t name_len,
                 // remove the .gz ending
                 filename[strlen(filename) - 3] = 0;
             }
+            else if (ends_with_ignore_case(filename, ".bz2") == 0)
+            {
+                // remove the .bz2 ending
+                filename[strlen(filename) - 4] = 0;
+            }
 
             int len = strlen(filename);
             int i = len - 1;
